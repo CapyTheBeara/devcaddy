@@ -20,6 +20,7 @@ type File struct {
 	Dir     string
 	Ext     string
 	Files   []string
+	Error   error
 }
 
 func (file *File) mergeFiles() string {

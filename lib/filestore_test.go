@@ -126,9 +126,9 @@ func TestUpdatedChannel(t *testing.T) {
 
 			select {
 			case res = <-store.DidUpdate:
+				So(res, ShouldBeTrue)
 			}
 
-			So(res, ShouldBeTrue)
 		})
 	})
 }
