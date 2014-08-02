@@ -2,13 +2,18 @@ package lib
 
 import (
 	"os/exec"
+	"strings"
 )
 
+const FILE_PATH_SPLITTER = "__SERVER_OUTPUT_PATH__="
+
 type Processor struct {
-	Transformer func(*File) *File
-	SendOutput  bool
-	InC         chan *File
-	OutC        chan *File
+	Name       string
+	Transform  func(*File) *File
+	SendOutput bool
+	InC        chan *File
+	OutC       chan *File
+	PipeTo     string
 }
 
 func (p *Processor) listen() {
@@ -19,7 +24,7 @@ func (p *Processor) listen() {
 				out := &File{Name: in.Name}
 
 				if p.SendOutput {
-					out = p.Transformer(in)
+					out = p.Transform(in)
 				}
 
 				p.OutC <- out
@@ -38,10 +43,10 @@ func NewProcessor(fn func(*File) *File, opts ...interface{}) *Processor {
 	}
 
 	p := &Processor{
-		Transformer: fn,
-		SendOutput:  sendOutput,
-		InC:         make(chan *File),
-		OutC:        make(chan *File),
+		Transform:  fn,
+		SendOutput: sendOutput,
+		InC:        make(chan *File),
+		OutC:       make(chan *File),
 	}
 
 	p.listen()
@@ -49,25 +54,36 @@ func NewProcessor(fn func(*File) *File, opts ...interface{}) *Processor {
 	return p
 }
 
-func NewCommandProcessor(name string, opts ...interface{}) *Processor {
+func NewCommandProcessor(cmd string, opts ...interface{}) *Processor {
 	args := []string{}
+	sendOutput := true
 
 	if opts != nil {
 		args = opts[0].([]string)
+
+		if len(opts) > 1 {
+			sendOutput = opts[1].(bool)
+		}
 	}
 
 	fn := func(f *File) *File {
 		res := &File{Name: f.Name}
-		cmd := exec.Command(name, append(args, f.Name, f.Content)...)
+		cmd := exec.Command(cmd, append(args, f.Name, f.Content)...)
 
-		out, err := cmd.Output()
+		b, err := cmd.Output()
 		if err != nil {
 			res.Error = err
 		}
 
-		res.Content = string(out)
+		split := strings.Split(string(b), FILE_PATH_SPLITTER)
+
+		if len(split) > 1 {
+			res.Name = split[1]
+		}
+
+		res.Content = split[0]
 		return res
 	}
 
-	return NewProcessor(fn)
+	return NewProcessor(fn, sendOutput)
 }
