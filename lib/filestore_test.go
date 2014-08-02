@@ -8,6 +8,7 @@ import (
 
 const cfg = `
 {
+    "root": "",
     "files": [
         {
             "name": "app.js",
@@ -33,7 +34,7 @@ const cfg = `
 
 func TestFileAccessing(t *testing.T) {
 	Convey("Given files exist in the store", t, func() {
-		store := NewStore("/proj", NewConfig(cfg, ""))
+		store := NewStore("/proj", NewConfig([]byte(cfg)))
 		store.Put("/proj/app/controllers/foo.js", "foo")
 		store.Put("/proj/app/models/bar.js", "bar")
 		store.Put("/proj/app/routes/baz.js", "baz")
@@ -81,7 +82,7 @@ func TestFileAccessing(t *testing.T) {
 
 func TestUpdatedChannel(t *testing.T) {
 	Convey("Given a file was added", t, func() {
-		store := NewStore("/proj", NewConfig(cfg, ""))
+		store := NewStore("/proj", NewConfig([]byte(cfg)))
 		var res bool
 
 		store.Put("/proj/app/controllers/foo.js", "foo")

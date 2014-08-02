@@ -12,6 +12,7 @@ type ProcessorConfig struct {
 }
 
 type Config struct {
+	Root       string
 	Watch      []*WatcherConfig
 	Watchers   []Watcher
 	Plugins    []*ProcessorConfig
@@ -92,9 +93,9 @@ func (c *Config) makeWatchers(root string) {
 	}
 }
 
-func NewConfig(cfg, root string) *Config {
+func NewConfig(cfg []byte) *Config {
 	config := Config{}
-	err := json.NewDecoder(strings.NewReader(cfg)).Decode(&config)
+	err := json.Unmarshal(cfg, &config)
 	if err != nil {
 		log.Fatalln("[error] Problem parsing JSON config:", err)
 	}
@@ -104,8 +105,8 @@ func NewConfig(cfg, root string) *Config {
 	}
 
 	config.makeProcessors()
-	config.makeWatchers(root)
-	config.Store = NewStore(root, &config)
+	config.makeWatchers(config.Root)
+	config.Store = NewStore(config.Root, &config)
 
 	return &config
 }

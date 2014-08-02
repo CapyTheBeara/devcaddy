@@ -8,6 +8,7 @@ import (
 
 const cfg2 = `
 {
+    "root": "../mockapp",
     "plugins": [
         {
             "name": "transpile-js",
@@ -69,7 +70,7 @@ const cfg2 = `
 
 func TestProcessorCreation(t *testing.T) {
 	Convey("Processors from the config", t, func() {
-		c := NewConfig(cfg2, "../mockapp")
+		c := NewConfig([]byte(cfg2))
 		p := c.Processors[0]
 
 		Convey("Names should be correct", func() {
@@ -91,7 +92,7 @@ func TestProcessorCreation(t *testing.T) {
 func TestMakeStore(t *testing.T) {
 	Convey("PopulateStore creates a store and adds initial files", t, func() {
 		done := make(chan bool)
-		c := NewConfig(cfg2, "../mockapp")
+		c := NewConfig([]byte(cfg2))
 		store := c.PopulateStore(done)
 
 		<-done
