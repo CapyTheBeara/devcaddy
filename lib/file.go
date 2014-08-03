@@ -15,6 +15,7 @@ type File struct {
 	Ext     string
 	Files   []string
 	Error   error
+	Plugins []string
 }
 
 func (file *File) MergeFiles(s *Store) string {

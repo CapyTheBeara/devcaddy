@@ -87,6 +87,16 @@ func (c *Config) makeProcessors() {
 func (c *Config) makeWatchers(root string) {
 	c.outC = make(chan *File)
 
+	for _, f := range c.Files {
+		wc := WatcherConfig{
+			Dir:     f.Dir,
+			Ext:     f.Ext,
+			Files:   f.Files,
+			Plugins: f.Plugins,
+		}
+		c.Watch = append(c.Watch, &wc)
+	}
+
 	for _, wc := range c.Watch {
 		w := NewWatcher(root, c.outC, wc, c)
 		c.Watchers = append(c.Watchers, w)

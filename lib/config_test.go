@@ -30,29 +30,17 @@ const cfg2 = `
     ],
     "watch": [
         {
-            "dir": "app",
-            "ext": "js",
-            "plugins": ["transpile-js"]
-        },
-        {
             "dir": "app/templates",
             "ext": "hbs",
             "plugins": ["template"]
-        },
-        {
-            "dir": "vendor",
-            "files": ["bar/index.js", "baz/main.js"]
-        },
-        {
-            "dir": "app",
-            "files": ["index.html"]
         }
     ],
     "files": [
         {
             "name": "app.js",
             "dir": "app",
-            "ext": "js"
+            "ext": "js",
+            "plugins": ["transpile-js"]
         },
         {
             "name": "vendor.js",
