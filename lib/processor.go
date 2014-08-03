@@ -7,13 +7,16 @@ import (
 
 const FILE_PATH_SPLITTER = "__SERVER_OUTPUT_PATH__="
 
+type ProcessorConfig struct {
+	Name, Command, Args, PipeTo string
+	LogOnly, NoOutput           bool
+}
+
 type Processor struct {
-	Name       string
-	Transform  func(*File) *File
-	SendOutput bool
-	InC        chan *File
-	OutC       chan *File
-	PipeTo     string
+	ProcessorConfig
+	Transform func(*File) *File
+	InC       chan *File
+	OutC      chan *File
 }
 
 func (p *Processor) listen() {
@@ -21,9 +24,10 @@ func (p *Processor) listen() {
 		for {
 			select {
 			case in := <-p.InC:
-				out := &File{Name: in.Name}
+				var out *File
 
-				if p.SendOutput {
+				if !p.NoOutput {
+					in.LogOnly = p.LogOnly
 					out = p.Transform(in)
 				}
 
@@ -33,42 +37,28 @@ func (p *Processor) listen() {
 	}()
 }
 
-func NewProcessor(fn func(*File) *File, opts ...interface{}) *Processor {
-	sendOutput := true
-
-	if opts != nil {
-		if opts[0] != nil {
-			sendOutput = opts[0].(bool)
-		}
-	}
-
+func NewProcessor(cfg *ProcessorConfig, fn func(*File) *File) *Processor {
 	p := &Processor{
-		Transform:  fn,
-		SendOutput: sendOutput,
-		InC:        make(chan *File),
-		OutC:       make(chan *File),
+		ProcessorConfig: *cfg,
+		Transform:       fn,
+		InC:             make(chan *File),
+		OutC:            make(chan *File),
 	}
 
 	p.listen()
-
 	return p
 }
 
-func NewCommandProcessor(cmd string, opts ...interface{}) *Processor {
-	args := []string{}
-	sendOutput := true
-
-	if opts != nil {
-		args = opts[0].([]string)
-
-		if len(opts) > 1 {
-			sendOutput = opts[1].(bool)
-		}
-	}
+func NewCommandProcessor(cfg *ProcessorConfig) *Processor {
+	args := strings.Split(cfg.Args, " ")
 
 	fn := func(f *File) *File {
-		res := &File{Name: f.Name}
-		cmd := exec.Command(cmd, append(args, f.Name, f.Content)...)
+		res := &File{
+			Name:    f.Name,
+			LogOnly: f.LogOnly,
+		}
+
+		cmd := exec.Command(cfg.Command, append(args, f.Name, f.Content)...)
 
 		b, err := cmd.Output()
 		if err != nil {
@@ -85,5 +75,5 @@ func NewCommandProcessor(cmd string, opts ...interface{}) *Processor {
 		return res
 	}
 
-	return NewProcessor(fn, sendOutput)
+	return NewProcessor(cfg, fn)
 }

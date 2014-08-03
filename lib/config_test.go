@@ -16,10 +16,16 @@ const cfg2 = `
             "args": "-n"
         },
         {
+            "name": "silent",
+            "command": "echo",
+            "args": "silent",
+            "noOutput": true
+        },
+        {
             "name": "lint",
             "command": "echo",
             "args": "lint",
-            "noOutput": true
+            "logOnly": true
         },
         {
             "name": "template",
@@ -40,7 +46,7 @@ const cfg2 = `
             "name": "app.js",
             "dir": "app",
             "ext": "js",
-            "plugins": ["transpile-js"]
+            "plugins": ["transpile-js", "silent", "lint"]
         },
         {
             "name": "vendor.js",

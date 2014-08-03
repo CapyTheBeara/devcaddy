@@ -53,10 +53,10 @@ func (w *DirWatcher) GetAllFiles() int {
 
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() && strings.HasSuffix(path, w.Ext) {
-			size++
 			f := getFile(path)
 
 			for _, p := range w.Processors {
+				size++
 				p.InC <- f
 			}
 		}

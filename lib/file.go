@@ -16,6 +16,7 @@ type File struct {
 	Files   []string
 	Error   error
 	Plugins []string
+	LogOnly bool
 }
 
 func (file *File) MergeFiles(s *Store) string {

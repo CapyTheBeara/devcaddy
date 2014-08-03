@@ -42,8 +42,11 @@ func TestDirWatcher(t *testing.T) {
 			Plugins: []string{"transpile-js"},
 		}
 
-		p := NewCommandProcessor("echo", []string{"-n"})
-		p.Name = "transpile-js"
+		p := NewCommandProcessor(&ProcessorConfig{
+			Name:    "transpile-js",
+			Command: "echo",
+			Args:    "-n",
+		})
 
 		config := Config{Processors: []*Processor{p}}
 		w := NewWatcher("../mockapp", make(chan *File), &c, &config)

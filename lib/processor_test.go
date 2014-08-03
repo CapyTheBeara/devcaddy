@@ -20,7 +20,7 @@ func TestProcessor(t *testing.T) {
 		}
 
 		Convey("It can manipulate it's input", func() {
-			p := NewProcessor(fn)
+			p := NewProcessor(&ProcessorConfig{}, fn)
 			p.InC <- inputFile
 			res := <-p.OutC
 
@@ -29,12 +29,11 @@ func TestProcessor(t *testing.T) {
 		})
 
 		Convey("It can be configured to not send it's transformer output", func() {
-			p := NewProcessor(fn, false)
+			p := NewProcessor(&ProcessorConfig{NoOutput: true}, fn)
 			p.InC <- inputFile
 			res := <-p.OutC
 
-			So(res.Name, ShouldEqual, "foo.js")
-			So(res.Content, ShouldEqual, "")
+			So(res, ShouldBeNil)
 		})
 	})
 }
@@ -44,7 +43,10 @@ func TestCommandProcessor(t *testing.T) {
 
 	Convey("Given a CommandProcessor", t, func() {
 		Convey("An input file's name and content is sent as params", func() {
-			p := NewCommandProcessor("echo", []string{"-n"})
+			p := NewCommandProcessor(&ProcessorConfig{
+				Command: "echo",
+				Args:    "-n",
+			})
 			p.InC <- inputFile
 			res := <-p.OutC
 
@@ -53,7 +55,9 @@ func TestCommandProcessor(t *testing.T) {
 		})
 
 		Convey("Command error is added to the output", func() {
-			p := NewCommandProcessor("a")
+			p := NewCommandProcessor(&ProcessorConfig{
+				Command: "a",
+			})
 			p.InC <- inputFile
 			res := <-p.OutC
 
@@ -63,7 +67,10 @@ func TestCommandProcessor(t *testing.T) {
 		})
 
 		Convey("Command can change the output file's name", func() {
-			p := NewCommandProcessor("echo", []string{"-n", "__SERVER_OUTPUT_PATH__="})
+			p := NewCommandProcessor(&ProcessorConfig{
+				Command: "echo",
+				Args:    "-n __SERVER_OUTPUT_PATH__=",
+			})
 			p.InC <- inputFile
 			res := <-p.OutC
 

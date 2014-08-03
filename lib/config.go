@@ -3,13 +3,7 @@ package lib
 import (
 	"encoding/json"
 	"log"
-	"strings"
 )
-
-type ProcessorConfig struct {
-	Name, Command, Args, PipeTo string
-	NoOutput                    bool
-}
 
 type Config struct {
 	Root       string
@@ -40,7 +34,11 @@ func (c *Config) PopulateStore(done chan bool) *Store {
 		i := 0
 		for f := range c.outC {
 			i++
-			c.Store.Put(f.Name, f.Content)
+
+			if f != nil && !f.LogOnly {
+				c.Store.Put(f.Name, f.Content)
+			}
+
 			if size != -1 && i == size {
 				done <- true
 			}
@@ -59,28 +57,15 @@ func (c *Config) PopulateStore(done chan bool) *Store {
 
 func (c *Config) makeProcessors() {
 	for _, pl := range c.Plugins {
-		var p *Processor
-		if pl.Command != "" {
-			args := strings.Split(pl.Args, " ")
-			sendOutput := true
-
-			if pl.NoOutput {
-				sendOutput = false
-			}
-			p = NewCommandProcessor(pl.Command, args, sendOutput)
-		}
-
-		p.Name = pl.Name
+		p := NewCommandProcessor(pl)
 
 		if pl.PipeTo != "" {
 			pipeP := c.GetProcessor(pl.PipeTo)
 			p.OutC = pipeP.InC
-			p.PipeTo = pl.PipeTo
 		}
 
 		c.Processors = append(c.Processors, p)
 	}
-
 	return
 }
 
