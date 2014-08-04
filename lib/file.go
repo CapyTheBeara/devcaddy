@@ -5,16 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-)
 
-type Op uint32
-
-const (
-	CREATE Op = 1 << iota
-	WRITE
-	REMOVE
-	RENAME
-	CHMOD
+	"gopkg.in/fsnotify.v0"
 )
 
 type File struct {
@@ -27,7 +19,7 @@ type File struct {
 	Error   error
 	Plugins []string
 	LogOnly bool
-	Op      Op
+	Op      fsnotify.Op
 }
 
 func (file *File) MergeStoreFiles(s *Store) string {
