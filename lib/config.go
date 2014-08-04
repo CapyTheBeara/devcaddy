@@ -46,6 +46,8 @@ func (c *Config) PopulateStore(done chan bool) *Store {
 		}
 	}()
 
+	c.makeWatchers()
+
 	n := 0
 	for _, w := range c.Watchers {
 		n += w.GetAllFiles()
@@ -69,7 +71,7 @@ func (c *Config) makeProcessors() {
 	return
 }
 
-func (c *Config) makeWatchers(root string) {
+func (c *Config) makeWatchers() {
 	c.outC = make(chan *File)
 
 	for _, f := range c.Files {
@@ -83,7 +85,7 @@ func (c *Config) makeWatchers(root string) {
 	}
 
 	for _, wc := range c.Watch {
-		w := NewWatcher(root, c.outC, wc, c)
+		w := NewWatcher(c.Root, c.outC, wc, c)
 		c.Watchers = append(c.Watchers, w)
 	}
 }
@@ -100,7 +102,6 @@ func NewConfig(cfg []byte) *Config {
 	}
 
 	config.makeProcessors()
-	config.makeWatchers(config.Root)
 	config.Store = NewStore(config.Root, &config)
 
 	return &config
