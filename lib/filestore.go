@@ -21,7 +21,7 @@ func (s *Store) Get(name string) string {
 	}
 
 	if f.Type == "merge" {
-		return f.MergeFiles(s)
+		return f.MergeStoreFiles(s)
 	}
 
 	return f.Content

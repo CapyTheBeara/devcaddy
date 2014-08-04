@@ -7,6 +7,16 @@ import (
 	"strings"
 )
 
+type Op uint32
+
+const (
+	CREATE Op = 1 << iota
+	WRITE
+	REMOVE
+	RENAME
+	CHMOD
+)
+
 type File struct {
 	Name    string
 	Content string
@@ -17,9 +27,10 @@ type File struct {
 	Error   error
 	Plugins []string
 	LogOnly bool
+	Op      Op
 }
 
-func (file *File) MergeFiles(s *Store) string {
+func (file *File) MergeStoreFiles(s *Store) string {
 	contents := []string{}
 	dir := filepath.Join(s.Root, file.Dir)
 
