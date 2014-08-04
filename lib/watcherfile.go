@@ -38,3 +38,8 @@ func (w *FileWatcher) addWatchDirs() {
 func (w *FileWatcher) handleNewDir(name string) {
 	return
 }
+
+func (w *FileWatcher) processFile(f *File) int {
+	w.OutC <- f
+	return 1
+}

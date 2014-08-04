@@ -23,11 +23,7 @@ func (w *DirWatcher) GetAllFiles() int {
 		}
 		if !info.IsDir() && strings.HasSuffix(path, w.Ext) {
 			f := w.getFile(path)
-
-			for _, p := range w.Processors {
-				size++
-				p.InC <- f
-			}
+			size += w.processFile(f)
 		}
 		return nil
 	})
@@ -53,6 +49,15 @@ func (w *DirWatcher) addWatchDirs() {
 
 func (w *DirWatcher) handleNewDir(name string) {
 	w.addWatchDir(name)
+}
+
+func (w *DirWatcher) processFile(f *File) int {
+	i := 0
+	for _, p := range w.Processors {
+		i++
+		p.InC <- f
+	}
+	return i
 }
 
 func (w *DirWatcher) fullPath() string {

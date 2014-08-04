@@ -39,7 +39,6 @@ func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) 
 			w.Processors = append(w.Processors, p)
 		}
 		wa = &w
-
 	}
 
 	go wa.listen(wa)
@@ -61,6 +60,7 @@ type Watcher interface {
 	fsWatcher() *fsnotify.Watcher
 	listen(Watcher)
 	handleNewDir(string)
+	processFile(*File) int
 }
 
 type watcher struct {
@@ -93,21 +93,21 @@ func (w *watcher) listen(wa Watcher) {
 	for {
 		select {
 		case evt := <-w.fsWatcher().Events:
-			op := Op(evt.Op)
+			op := evt.Op
 
 			if evt.Name != "" {
 				log.Println(evt)
 			}
 
 			if !wa.matchesFile(evt.Name) {
-				fi, err := os.Stat(evt.Name)
-				if err != nil {
-					log.Println("[error] Unable to get file info:", err)
-				}
+				// ?need to handle dir deletion?
+				if op == fsnotify.Create {
+					fi, err := os.Stat(evt.Name)
+					if err != nil {
+						log.Println("[error] Unable to get file info:", err)
+					}
 
-				if fi.IsDir() {
-					// ?need to handle dir deletion?
-					if op == CREATE {
+					if fi.IsDir() {
 						wa.handleNewDir(evt.Name)
 					}
 				}
@@ -119,11 +119,12 @@ func (w *watcher) listen(wa Watcher) {
 				Op:   op,
 			}
 
-			if op != REMOVE {
+			if op != fsnotify.Remove {
 				f = *w.getFile(f.Name)
 			}
 
-			w.OutC <- &f
+			wa.processFile(&f)
+			// w.OutC <- &f
 
 		case err := <-w.fsWatcher().Errors:
 			if err != nil && err.Error() != "" {

@@ -117,14 +117,14 @@ func TestDirWatcher(t *testing.T) {
 
 			f := <-w.OutChan()
 			So(f.Name, ShouldEqual, "../tmp2/foo.js")
-			So(f.Content, ShouldEqual, "var foo;\ns")
+			So(f.Content, ShouldEqual, "../tmp2/foo.js var foo;\ns")
 
 			// test subdir is watched
 			updateTestFile(t, "../tmp2/bar/main.js", "d")
 
 			f = <-w.OutChan()
 			So(f.Name, ShouldEqual, "../tmp2/bar/main.js")
-			So(f.Content, ShouldEqual, "1d")
+			So(f.Content, ShouldEqual, "../tmp2/bar/main.js 1d")
 
 			// test creating new subdir is watched
 			makeTestDir(t, dir+"/baz", 20)
@@ -132,7 +132,7 @@ func TestDirWatcher(t *testing.T) {
 
 			f = <-w.OutChan()
 			So(f.Name, ShouldEqual, "../tmp2/baz/baz.js")
-			So(f.Content, ShouldEqual, "2")
+			So(f.Content, ShouldEqual, "../tmp2/baz/baz.js 2")
 		})
 	})
 }
