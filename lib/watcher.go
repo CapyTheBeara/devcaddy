@@ -2,10 +2,50 @@ package lib
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"gopkg.in/fsnotify.v0"
 )
+
+func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) Watcher {
+	var wa Watcher
+	ready := make(chan bool)
+
+	fsw, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(c.Files) > 0 {
+		w := &FileWatcher{
+			watcher: watcher{root, c.Dir, outC, ready, fsw},
+			Files:   c.Files,
+		}
+		wa = w
+	} else {
+		w := DirWatcher{
+			watcher: watcher{root, c.Dir, outC, ready, fsw},
+			Ext:     c.Ext,
+		}
+
+		for _, name := range c.Plugins {
+			p := config.GetProcessor(name)
+
+			if p.PipeTo == "" {
+				p.OutC = w.OutC
+			}
+			w.Processors = append(w.Processors, p)
+		}
+		wa = &w
+
+	}
+
+	go wa.listen(wa)
+	wa.addWatchDirs()
+	return wa
+}
 
 type WatcherConfig struct {
 	Dir, Ext       string
@@ -15,84 +55,88 @@ type WatcherConfig struct {
 type Watcher interface {
 	GetAllFiles() int
 	OutChan() chan *File
+	Ready() chan bool
+	addWatchDirs()
+	matchesFile(string) bool
+	fsWatcher() *fsnotify.Watcher
+	listen(Watcher)
+	handleNewDir(string)
 }
 
 type watcher struct {
 	Root, Dir string
 	OutC      chan *File
+	ready     chan bool
+	fsw       *fsnotify.Watcher
 }
 
 func (w *watcher) OutChan() chan *File {
 	return w.OutC
 }
 
-type FileWatcher struct {
-	watcher
-	Files []string
+func (w *watcher) Ready() chan bool {
+	return w.ready
 }
 
-func (w *FileWatcher) GetAllFiles() int {
-	size := 0
-	for _, name := range w.Files {
-		size++
-		path := filepath.Join(w.Root, w.Dir, name)
-		w.OutC <- getFile(path)
+func (w *watcher) fsWatcher() *fsnotify.Watcher {
+	return w.fsw
+}
+func (w *watcher) addWatchDir(path string) {
+	err := w.fsw.Add(path)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return size
 }
 
-type DirWatcher struct {
-	watcher
-	Ext        string
-	Processors []*Processor
-}
+func (w *watcher) listen(wa Watcher) {
+	w.ready <- true
+	for {
+		select {
+		case evt := <-w.fsWatcher().Events:
+			op := Op(evt.Op)
 
-func (w *DirWatcher) GetAllFiles() int {
-	size := 0
-	dir := filepath.Join(w.Root, w.Dir)
+			if evt.Name != "" {
+				log.Println(evt)
+			}
 
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && strings.HasSuffix(path, w.Ext) {
-			f := getFile(path)
+			if !wa.matchesFile(evt.Name) {
+				fi, err := os.Stat(evt.Name)
+				if err != nil {
+					log.Println("[error] Unable to get file info:", err)
+				}
 
-			for _, p := range w.Processors {
-				size++
-				p.InC <- f
+				if fi.IsDir() {
+					// ?need to handle dir deletion?
+					if op == CREATE {
+						wa.handleNewDir(evt.Name)
+					}
+				}
+				continue
+			}
+
+			f := File{
+				Name: filepath.Join(w.Root, evt.Name),
+				Op:   op,
+			}
+
+			if op != REMOVE {
+				f = *w.getFile(f.Name)
+			}
+
+			w.OutC <- &f
+
+		case err := <-w.fsWatcher().Errors:
+			if err != nil && err.Error() != "" {
+				log.Println("[watch error]", err)
 			}
 		}
-		return err
-	})
-	return size
+	}
 }
 
-func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) Watcher {
-	if len(c.Files) > 0 {
-		return &FileWatcher{
-			watcher: watcher{root, c.Dir, outC},
-			Files:   c.Files,
-		}
-	}
-
-	w := DirWatcher{
-		watcher: watcher{root, c.Dir, outC},
-		Ext:     c.Ext,
-	}
-
-	for _, name := range c.Plugins {
-		p := config.GetProcessor(name)
-
-		if p.PipeTo == "" {
-			p.OutC = w.OutC
-		}
-		w.Processors = append(w.Processors, p)
-	}
-	return &w
-}
-
-func getFile(path string) *File {
+func (w *watcher) getFile(path string) *File {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
 	return &File{Name: path, Content: string(b)}
