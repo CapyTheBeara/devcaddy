@@ -83,7 +83,7 @@ func TestFileAccessing(t *testing.T) {
 func TestUpdatedChannel(t *testing.T) {
 	Convey("Given a file was added", t, func() {
 		store := NewStore("/proj", NewConfig([]byte(cfg)))
-		var res bool
+		var res string
 
 		store.Put("/proj/app/controllers/foo.js", "foo")
 
@@ -92,7 +92,7 @@ func TestUpdatedChannel(t *testing.T) {
 		}
 
 		Convey("An update was triggered", func() {
-			So(res, ShouldBeTrue)
+			So(res, ShouldEqual, "/proj/app/controllers/foo.js")
 		})
 
 		Convey("Deleting the file triggers an update", func() {
@@ -100,7 +100,7 @@ func TestUpdatedChannel(t *testing.T) {
 
 			select {
 			case res = <-store.DidUpdate:
-				So(res, ShouldBeTrue)
+				So(res, ShouldEqual, "/proj/app/controllers/foo.js")
 			}
 
 		})

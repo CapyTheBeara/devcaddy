@@ -5,13 +5,21 @@ var store *Store
 type Store struct {
 	Root      string
 	Files     []*File
-	DidUpdate chan bool
+	DidUpdate chan string
 }
 
-func (s *Store) Put(name string, content string) {
+func (s *Store) Put(name string, content string, args ...bool) {
 	f := &File{Name: name, Content: content}
 	s.putFile(f)
-	s.doUpdate()
+
+	update := true
+	if args != nil {
+		update = args[0]
+	}
+
+	if update {
+		s.doUpdate(name)
+	}
 }
 
 func (s *Store) Get(name string) string {
@@ -34,7 +42,7 @@ func (s *Store) Delete(name string) {
 	}
 
 	s.Files = append(s.Files[:i], s.Files[i+1:]...)
-	s.doUpdate()
+	s.doUpdate(name)
 }
 
 func (s *Store) getFile(name string) (i int, f *File) {
@@ -51,9 +59,9 @@ func (s *Store) putFile(f *File) {
 	s.Files = append(s.Files, f)
 }
 
-func (s *Store) doUpdate() {
+func (s *Store) doUpdate(name string) {
 	go func() {
-		s.DidUpdate <- true
+		s.DidUpdate <- name
 	}()
 }
 
@@ -61,7 +69,7 @@ func NewStore(root string, config *Config) *Store {
 	store = &Store{
 		Root:      root,
 		Files:     []*File{},
-		DidUpdate: make(chan bool),
+		DidUpdate: make(chan string),
 	}
 
 	for _, f := range config.Files {
