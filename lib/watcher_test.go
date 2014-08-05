@@ -2,8 +2,10 @@ package lib
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"gopkg.in/fsnotify.v0"
 )
 
 func TestFileWatcher(t *testing.T) {
@@ -133,6 +135,51 @@ func TestDirWatcher(t *testing.T) {
 			f = <-w.OutChan()
 			So(f.Name, ShouldEqual, "../tmp2/baz/baz.js")
 			So(f.Content, ShouldEqual, "../tmp2/baz/baz.js 2")
+		})
+
+		Convey("Multple identical events within 100ms are considered as one", func() {
+			defer removeTestDir(t, dir)
+
+			evt := fsnotify.Event{Name: "../tmp2/foo.js", Op: fsnotify.Create}
+			evt2 := fsnotify.Event{Name: "../tmp2/bar/main.js", Op: fsnotify.Create}
+
+			w.fsWatcher().Events <- evt
+			w.fsWatcher().Events <- evt2
+			w.fsWatcher().Events <- evt
+
+			f := <-w.OutChan()
+			So(f.Name, ShouldEqual, "../tmp2/foo.js")
+
+			f = <-w.OutChan()
+			So(f.Name, ShouldEqual, "../tmp2/bar/main.js")
+
+			select {
+			case <-w.OutChan():
+				So("Fails - shouldn't process the second event", ShouldBeNil)
+			default:
+				So("Passes - second event is not processed", ShouldNotBeBlank)
+			}
+		})
+
+		Convey("Multiple identical events >100ms apart are considered separate", func() {
+			defer removeTestDir(t, dir)
+
+			evt := fsnotify.Event{Name: "../tmp2/foo.js", Op: fsnotify.Create}
+			w.fsWatcher().Events <- evt
+
+			time.Sleep(time.Millisecond * 100)
+			w.fsWatcher().Events <- evt
+
+			f := <-w.OutChan()
+			So(f.Name, ShouldEqual, "../tmp2/foo.js")
+			time.Sleep(time.Millisecond * 20)
+
+			select {
+			case <-w.OutChan():
+				So("Passes - second event is processed", ShouldNotBeBlank)
+			default:
+				So("Fails - shouldn't suppress second event", ShouldBeNil)
+			}
 		})
 	})
 }

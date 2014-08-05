@@ -41,7 +41,8 @@ func (w *DirWatcher) addWatchDirs() {
 		}
 
 		if info.IsDir() {
-			w.addWatchDir(filepath.Join(w.Root, path))
+			log.Printf("[watching] %s for .%s files", path, w.Ext)
+			w.addWatchDir(path)
 		}
 		return nil
 	})
@@ -54,9 +55,12 @@ func (w *DirWatcher) handleNewDir(name string) {
 func (w *DirWatcher) processFile(f *File) int {
 	i := 0
 	for _, p := range w.Processors {
-		i++
+		if !p.LogOnly && !p.NoOutput {
+			i++
+		}
 		p.InC <- f
 	}
+
 	return i
 }
 

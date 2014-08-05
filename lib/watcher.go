@@ -4,29 +4,35 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
+	"time"
 
 	"gopkg.in/fsnotify.v0"
 )
 
+var zeroTime = time.Time{}
+
 func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) Watcher {
 	var wa Watcher
 	ready := make(chan bool)
+	procRes := make(chan *File)
+	events := make(map[string]time.Time)
 
 	fsw, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	_watcher := watcher{root, c.Dir, outC, ready, fsw, procRes, events}
+
 	if len(c.Files) > 0 {
 		w := &FileWatcher{
-			watcher: watcher{root, c.Dir, outC, ready, fsw},
+			watcher: _watcher,
 			Files:   c.Files,
 		}
 		wa = w
 	} else {
 		w := DirWatcher{
-			watcher: watcher{root, c.Dir, outC, ready, fsw},
+			watcher: _watcher,
 			Ext:     c.Ext,
 		}
 
@@ -34,7 +40,7 @@ func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) 
 			p := config.GetProcessor(name)
 
 			if p.PipeTo == "" {
-				p.OutC = w.OutC
+				p.OutC = w.procRes
 			}
 			w.Processors = append(w.Processors, p)
 		}
@@ -55,6 +61,7 @@ type Watcher interface {
 	GetAllFiles() int
 	OutChan() chan *File
 	Ready() chan bool
+	ProcessorRes() chan *File
 	addWatchDirs()
 	matchesFile(string) bool
 	fsWatcher() *fsnotify.Watcher
@@ -68,6 +75,8 @@ type watcher struct {
 	OutC      chan *File
 	ready     chan bool
 	fsw       *fsnotify.Watcher
+	procRes   chan *File
+	events    map[string]time.Time
 }
 
 func (w *watcher) OutChan() chan *File {
@@ -81,6 +90,7 @@ func (w *watcher) Ready() chan bool {
 func (w *watcher) fsWatcher() *fsnotify.Watcher {
 	return w.fsw
 }
+
 func (w *watcher) addWatchDir(path string) {
 	err := w.fsw.Add(path)
 	if err != nil {
@@ -88,16 +98,45 @@ func (w *watcher) addWatchDir(path string) {
 	}
 }
 
+func (w *watcher) ProcessorRes() chan *File {
+	return w.procRes
+}
+
+func (w *watcher) filterProcessorRes() {
+	for {
+		f := <-w.ProcessorRes()
+		if f == nil || f.LogOnly {
+			continue
+		}
+		w.OutChan() <- f
+	}
+}
+
 func (w *watcher) listen(wa Watcher) {
-	w.ready <- true
+	// don't require reading from ready
+	go func() {
+		w.ready <- true
+	}()
+
+	go w.filterProcessorRes()
+
 	for {
 		select {
 		case evt := <-w.fsWatcher().Events:
 			op := evt.Op
+			now := time.Now()
 
-			if evt.Name != "" {
-				log.Println(evt)
+			if w.events[evt.Name] != zeroTime {
+				if now.Sub(w.events[evt.Name]).Seconds() < 0.01 {
+					continue
+				}
 			}
+
+			w.events[evt.Name] = now
+
+			// if evt.Name != "" {
+			// 	log.Println(evt)
+			// }
 
 			if !wa.matchesFile(evt.Name) {
 				// ?need to handle dir deletion?
@@ -115,16 +154,15 @@ func (w *watcher) listen(wa Watcher) {
 			}
 
 			f := File{
-				Name: filepath.Join(w.Root, evt.Name),
+				Name: evt.Name,
 				Op:   op,
 			}
 
-			if op != fsnotify.Remove {
+			if op != fsnotify.Remove && op != fsnotify.Rename {
 				f = *w.getFile(f.Name)
 			}
 
 			wa.processFile(&f)
-			// w.OutC <- &f
 
 		case err := <-w.fsWatcher().Errors:
 			if err != nil && err.Error() != "" {

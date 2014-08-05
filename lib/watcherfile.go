@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"log"
 	"path/filepath"
 )
 
@@ -21,7 +22,7 @@ func (w *FileWatcher) GetAllFiles() int {
 
 func (w *FileWatcher) matchesFile(name string) bool {
 	for _, f := range w.Files {
-		if name == filepath.Join(w.Dir, f) {
+		if name == filepath.Join(w.Root, w.Dir, f) {
 			return true
 		}
 	}
@@ -30,8 +31,10 @@ func (w *FileWatcher) matchesFile(name string) bool {
 
 func (w *FileWatcher) addWatchDirs() {
 	for _, f := range w.Files {
-		path := filepath.Dir(filepath.Join(w.Root, w.Dir, f))
-		w.addWatchDir(path)
+		name := filepath.Join(w.Root, w.Dir, f)
+
+		log.Println("[watching]", name)
+		w.addWatchDir(filepath.Dir(name))
 	}
 }
 
@@ -40,6 +43,6 @@ func (w *FileWatcher) handleNewDir(name string) {
 }
 
 func (w *FileWatcher) processFile(f *File) int {
-	w.OutC <- f
+	w.procRes <- f
 	return 1
 }
