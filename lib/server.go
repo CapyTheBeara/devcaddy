@@ -18,22 +18,6 @@ func init() {
 	}
 }
 
-func reloadScript() string {
-	return `
-<script type='text/javascript'>
-    var livereloadWebSocket = new WebSocket("ws://localhost:3000/reload/");
-    livereloadWebSocket.onmessage = function(msg) {
-        livereloadWebSocket.close();
-        window.location.reload(true);
-    };
-
-    livereloadWebSocket.onopen = function(x) { console.log('[ws] Connection opened', new Date()); };
-    livereloadWebSocket.onclose = function() { console.log('[ws] closing'); };
-    livereloadWebSocket.onerror = function(err) { console.log('[ws] error', err); };
-</script>
-`
-}
-
 var assetTypes map[string]string
 
 type WSMessage struct {
@@ -65,7 +49,7 @@ func StartServer(store *Store, port, prox, assetRoot string) *Server {
 	}
 
 	s.AssetRoot = assetRoot
-	s.PrependIndex = reloadScript()
+	s.PrependIndex = reloadScript(port)
 
 	http.Handle("/reload/", s.Websocket())
 
