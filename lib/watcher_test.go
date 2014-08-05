@@ -130,11 +130,11 @@ func TestDirWatcher(t *testing.T) {
 
 			// test creating new subdir is watched
 			makeTestDir(t, dir+"/baz", 20)
-			makeTestFile(t, dir+"/baz", "baz.js", "2", 20)
+			makeTestFile(t, dir+"/baz", "baz.js", "", 0)
 
 			f = <-w.OutChan()
 			So(f.Name, ShouldEqual, "../tmp2/baz/baz.js")
-			So(f.Content, ShouldEqual, "../tmp2/baz/baz.js 2")
+			So(f.Content, ShouldEqual, "../tmp2/baz/baz.js ")
 		})
 
 		Convey("Multple identical events within 100ms are considered as one", func() {

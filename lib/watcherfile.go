@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"log"
 	"path/filepath"
 )
 
@@ -33,7 +32,7 @@ func (w *FileWatcher) addWatchDirs() {
 	for _, f := range w.Files {
 		name := filepath.Join(w.Root, w.Dir, f)
 
-		log.Println("[watching]", name)
+		Plog.Println("[watching]", name)
 		w.addWatchDir(filepath.Dir(name))
 	}
 }

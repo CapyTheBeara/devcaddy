@@ -41,7 +41,7 @@ func (w *DirWatcher) addWatchDirs() {
 		}
 
 		if info.IsDir() {
-			log.Printf("[watching] %s for .%s files", path, w.Ext)
+			Plog.Printf("[watching] %s for .%s files", path, w.Ext)
 			w.addWatchDir(path)
 		}
 		return nil

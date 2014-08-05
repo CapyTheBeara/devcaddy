@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const FILE_PATH_SPLITTER = "__SERVER_OUTPUT_PATH__="
+const FILE_PATH_SPLITTER = "__SERVER_FILE_PATH__="
 
 type ProcessorConfig struct {
 	Name, Command, Args, PipeTo string

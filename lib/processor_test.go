@@ -69,7 +69,7 @@ func TestCommandProcessor(t *testing.T) {
 		Convey("Command can change the output file's name", func() {
 			p := NewCommandProcessor(&ProcessorConfig{
 				Command: "echo",
-				Args:    "-n __SERVER_OUTPUT_PATH__=",
+				Args:    "-n __SERVER_FILE_PATH__=",
 			})
 			p.InC <- inputFile
 			res := <-p.OutC
