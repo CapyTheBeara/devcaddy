@@ -90,7 +90,6 @@ func TestMakeStore(t *testing.T) {
 		store := c.PopulateStore(done)
 
 		<-done
-
 		Convey("Defined files should be correct", func() {
 			So(store.Get("app.js"), ShouldEqual, "../mockapp/app/foo.js var foo;\n\n../mockapp/app/main.js var main;\n")
 			So(store.Get("vendor.js"), ShouldEqual, "var bar;\n\nvar baz;\n")
@@ -104,6 +103,12 @@ func TestMakeStore(t *testing.T) {
 
 		Convey("Plugin with PipeTo set, has the correct content", func() {
 			So(store.Get("../mockapp/app/templates/index.hbs"), ShouldEqual, "../mockapp/app/templates/index.hbs template ../mockapp/app/templates/index.hbs {{index}}\n\n")
+		})
+
+		Convey("After store is populated, watcher output goes to store", func() {
+			updateTestFile(t, "../mockapp/app/foo.js", "")
+			name := <-store.DidUpdate
+			So(name, ShouldEqual, "../mockapp/app/foo.js")
 		})
 	})
 }

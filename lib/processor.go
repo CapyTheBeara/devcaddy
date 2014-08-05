@@ -56,6 +56,7 @@ func NewCommandProcessor(cfg *ProcessorConfig) *Processor {
 		res := &File{
 			Name:    f.Name,
 			LogOnly: f.LogOnly,
+			Op:      f.Op,
 		}
 
 		cmd := exec.Command(cfg.Command, append(args, f.Name, f.Content)...)

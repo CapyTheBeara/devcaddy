@@ -29,20 +29,19 @@ func (c *Config) GetProcessor(name string) *Processor {
 
 func (c *Config) PopulateStore(done chan bool) *Store {
 	size := -1
+	sendUpdate := false
 
 	go func() {
 		i := 0
 		for f := range c.outC {
 			i++
 
-			if f != nil && !f.LogOnly {
-				c.Store.Put(f.Name, f.Content)
-			}
+			c.Store.Put(f.Name, f.Content, sendUpdate)
 
 			if size != -1 && i == size {
+				sendUpdate = true
 				done <- true
 			}
-
 		}
 	}()
 
