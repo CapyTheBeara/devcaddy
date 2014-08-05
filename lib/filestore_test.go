@@ -71,7 +71,7 @@ func TestFileAccessing(t *testing.T) {
 
 			Convey("It has the correct content after adding a file", func() {
 				store.Put("/proj/app/controllers/app.js", "app")
-				So(store.Get("app.js"), ShouldEqual, "foo\nbar\nbaz\napp")
+				So(store.Get("app.js"), ShouldEqual, "app\nfoo\nbar\nbaz")
 			})
 		})
 

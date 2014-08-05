@@ -21,11 +21,11 @@ func newTestWR(t *testing.T, url string) (*httptest.ResponseRecorder, *http.Requ
 
 func TestHtmls(t *testing.T) {
 	Convey("Given a server with a store", t, func() {
-		store := Store{}
+		store := NewStore("", &Config{})
 		store.Put("index.html", "index!")
 		store.Put("tests.html", "tests!")
 
-		s := NewServer(&store)
+		s := NewServer(store)
 
 		Convey("Html serves .html files from the store", func() {
 			w, r := newTestWR(t, "/")
@@ -82,11 +82,11 @@ func TestHtmls(t *testing.T) {
 
 func TestAssets(t *testing.T) {
 	Convey("Given a server with a store", t, func() {
-		store := Store{}
+		store := NewStore("", &Config{})
 		store.Put("app.js", "app js")
 		store.Put("app.css", "app css")
 
-		s := NewServer(&store)
+		s := NewServer(store)
 
 		Convey("Assets sends corresponding files from the store", func() {
 			w, r := newTestWR(t, "/assets/app.js")
@@ -113,8 +113,8 @@ func TestAssets(t *testing.T) {
 
 func TestWebsocket(t *testing.T) {
 	Convey("Given a test server", t, func() {
-		store := Store{DidUpdate: make(chan string)}
-		s := NewServer(&store)
+		store := NewStore("", &Config{})
+		s := NewServer(store)
 		ts := httptest.NewServer(s.Websocket())
 		addr := ts.Listener.Addr().String()
 

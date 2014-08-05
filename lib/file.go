@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gopkg.in/fsnotify.v0"
@@ -32,10 +33,17 @@ func (file *File) MergeStoreFiles(s *Store) string {
 			contents = append(contents, s.Get(path))
 		}
 	} else {
-		for _, f := range s.Files {
-			if strings.Contains(f.Name, dir) && strings.HasSuffix(f.Name, "."+file.Ext) {
-				contents = append(contents, f.Content)
+		names := []string{}
+		for n, _ := range s.Files {
+			if strings.Contains(n, dir) && strings.HasSuffix(n, "."+file.Ext) {
+				names = append(names, n)
 			}
+		}
+
+		sort.Strings(names)
+
+		for _, n := range names {
+			contents = append(contents, s.Get(n))
 		}
 	}
 
