@@ -49,6 +49,11 @@ func TestFileAccessing(t *testing.T) {
 			So(store.Get("/proj/app/controllers/foo.js"), ShouldEqual, "foo")
 		})
 
+		Convey("A file can be updated", func() {
+			store.Put("/proj/app/controllers/foo.js", "zzz")
+			So(store.Get("/proj/app/controllers/foo.js"), ShouldEqual, "zzz")
+		})
+
 		Convey("A file can be deleted", func() {
 			store.Delete("/proj/app/routes/baz.js")
 			So(store.Get("/proj/app/routes/baz.js"), ShouldEqual, "")
@@ -83,13 +88,8 @@ func TestFileAccessing(t *testing.T) {
 func TestUpdatedChannel(t *testing.T) {
 	Convey("Given a file was added", t, func() {
 		store := NewStore("/proj", NewConfig([]byte(cfg)))
-		var res string
-
 		store.Put("/proj/app/controllers/foo.js", "foo")
-
-		select {
-		case res = <-store.DidUpdate:
-		}
+		res := <-store.DidUpdate
 
 		Convey("An update was triggered", func() {
 			So(res, ShouldEqual, "/proj/app/controllers/foo.js")
@@ -98,11 +98,8 @@ func TestUpdatedChannel(t *testing.T) {
 		Convey("Deleting the file triggers an update", func() {
 			store.Delete("/proj/app/controllers/foo.js")
 
-			select {
-			case res = <-store.DidUpdate:
-				So(res, ShouldEqual, "/proj/app/controllers/foo.js")
-			}
-
+			res = <-store.DidUpdate
+			So(res, ShouldEqual, "/proj/app/controllers/foo.js")
 		})
 	})
 }

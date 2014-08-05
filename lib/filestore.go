@@ -55,8 +55,13 @@ func (s *Store) getFile(name string) (i int, f *File) {
 }
 
 func (s *Store) putFile(f *File) {
-	// TODO check if file is already present
-	s.Files = append(s.Files, f)
+	i, file := s.getFile(f.Name)
+	if i == -1 {
+		s.Files = append(s.Files, f)
+		return
+	}
+
+	file.Content = f.Content
 }
 
 func (s *Store) doUpdate(name string) {
