@@ -156,6 +156,10 @@ func (w *watcher) listen(wa Watcher) {
 			op := evt.Op
 			now := time.Now()
 
+			if evt.Op == fsnotify.Chmod {
+				continue
+			}
+
 			if w.events[evt.Name] != zeroTime {
 				if now.Sub(w.events[evt.Name]).Seconds() < 0.01 {
 					continue
