@@ -3,6 +3,8 @@ package lib
 import (
 	"encoding/json"
 	"log"
+	"os"
+	"path/filepath"
 )
 
 type Config struct {
@@ -99,6 +101,15 @@ func NewConfig(cfg []byte) *Config {
 	err := json.Unmarshal(cfg, &config)
 	if err != nil {
 		log.Fatalln("[error] Problem parsing JSON config:", err)
+	}
+
+	if config.Root == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Fatalln("[error] Unable to determine your project folder name. Please try again or specify it in your .json config file.")
+		}
+
+		config.Root = "../" + filepath.Base(cwd)
 	}
 
 	for _, f := range config.Files {

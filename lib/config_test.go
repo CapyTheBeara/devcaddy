@@ -124,3 +124,10 @@ func TestMakeStore(t *testing.T) {
 		})
 	})
 }
+
+func TestDefaultRoot(t *testing.T) {
+	Convey("If no root specified in config.json, it sets it to the relative cwd", t, func() {
+		c := NewConfig([]byte("{}"))
+		So(c.Root, ShouldEqual, "../lib")
+	})
+}
