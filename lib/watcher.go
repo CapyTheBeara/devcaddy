@@ -3,6 +3,8 @@ package lib
 import (
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/fsnotify.v0"
@@ -33,9 +35,10 @@ func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) 
 }
 
 type WatcherConfig struct {
-	Dir, Ext    string
-	Files       []string
-	PluginNames []string `json:"plugins"`
+	Dir, Ext, Proxy string
+	GroupAll        bool
+	Files           []string
+	PluginNames     []string `json:"plugins"`
 }
 
 type Watcher interface {
@@ -61,6 +64,7 @@ func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Co
 		Root:    root,
 		Dir:     dir,
 		OutC:    outC,
+		Proxy:   c.Proxy,
 		fsw:     fsw,
 		ready:   make(chan bool),
 		procRes: make(chan *File),
@@ -85,16 +89,21 @@ func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Co
 			w.Plugins = append(w.Plugins, p)
 		}
 	}
+
+	if c.GroupAll {
+		w.store = NewStore(config.Root, &Config{})
+	}
 	return w
 }
 
 type watcher struct {
-	Root, Dir     string
-	OutC, procRes chan *File
-	ready         chan bool
-	fsw           *fsnotify.Watcher
-	events        map[string]time.Time
-	Plugins       []*Plugin
+	Root, Dir, Proxy string
+	OutC, procRes    chan *File
+	ready            chan bool
+	fsw              *fsnotify.Watcher
+	events           map[string]time.Time
+	store            *Store
+	Plugins          []*Plugin
 }
 
 func (w *watcher) OutChan() chan *File {
@@ -171,8 +180,25 @@ func (w *watcher) listen(wa Watcher) {
 	}
 }
 
-func (w *watcher) sendFileToPlugin(path string, op fsnotify.Op) int {
+func (w *watcher) sendFileToPlugin(opath string, op fsnotify.Op) int {
+	path := opath
+
+	if w.Proxy != "" {
+		path = filepath.Join(w.Root, w.Proxy)
+	}
+
 	f := NewFile(path, op)
+
+	if w.store != nil {
+		w.store.Put(f.Name, f.Content)
+		<-w.store.DidUpdate
+
+		contents := []string{}
+		for _, f := range w.store.GetAll() {
+			contents = append(contents, f.Content)
+		}
+		f.Content = strings.Join(contents, "\n")
+	}
 
 	i := 0
 	for _, p := range w.Plugins {
