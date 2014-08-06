@@ -5,7 +5,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/monocle/devserver/lib"
+	"github.com/monocle/devcaddy/lib"
 )
 
 func main() {
@@ -14,9 +14,9 @@ func main() {
 
 	done := make(chan bool)
 
-	cfg, err := ioutil.ReadFile("devserver_config.json")
+	cfg, err := ioutil.ReadFile("devcaddy_config.json")
 	if err != nil {
-		log.Fatalln("[error] Problem reading devserver_config.json", err)
+		log.Fatalln("[error] Problem reading devcaddy_config.json", err)
 	}
 
 	c := lib.NewConfig(cfg)
