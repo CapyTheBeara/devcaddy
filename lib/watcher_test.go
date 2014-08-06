@@ -71,9 +71,9 @@ func TestFileWatcher(t *testing.T) {
 			defer removeTestDir(t, dir)
 
 			c := WatcherConfig{
-				Dir:     dir,
-				Files:   []string{"foo/index.js", "bar/main.js"},
-				Plugins: []string{"zzz"},
+				Dir:         dir,
+				Files:       []string{"foo/index.js", "bar/main.js"},
+				PluginNames: []string{"zzz"},
 			}
 
 			p := NewProcessor(&ProcessorConfig{Name: "zzz"}, func(f *File) *File {
@@ -104,9 +104,9 @@ func TestDirWatcher(t *testing.T) {
 		makeTestFile(t, dir, "nope.foo", "nope", 0)
 
 		c := WatcherConfig{
-			Dir:     dir,
-			Ext:     "js",
-			Plugins: []string{"transpile-js"},
+			Dir:         dir,
+			Ext:         "js",
+			PluginNames: []string{"transpile-js"},
 		}
 
 		p := NewCommandProcessor(&ProcessorConfig{

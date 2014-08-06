@@ -33,8 +33,9 @@ func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) 
 }
 
 type WatcherConfig struct {
-	Dir, Ext       string
-	Files, Plugins []string
+	Dir, Ext    string
+	Files       []string
+	PluginNames []string `json:"plugins"`
 }
 
 type Watcher interface {
@@ -67,7 +68,7 @@ func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Co
 		Processors: []*Processor{},
 	}
 
-	if len(c.Plugins) == 0 {
+	if len(c.PluginNames) == 0 {
 		p := NewProcessor(&ProcessorConfig{}, func(f *File) *File {
 			return f
 		})
@@ -75,7 +76,7 @@ func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Co
 		w.Processors = append(w.Processors, p)
 
 	} else {
-		for _, name := range c.Plugins {
+		for _, name := range c.PluginNames {
 			p := config.GetProcessor(name)
 
 			if p.PipeTo == "" {

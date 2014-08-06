@@ -80,10 +80,10 @@ func (c *Config) makeWatchers() {
 
 	for _, f := range c.Files {
 		wc := WatcherConfig{
-			Dir:     f.Dir,
-			Ext:     f.Ext,
-			Files:   f.Files,
-			Plugins: f.Plugins,
+			Dir:         f.Dir,
+			Ext:         f.Ext,
+			Files:       f.Files,
+			PluginNames: f.Plugins,
 		}
 		c.Watch = append(c.Watch, &wc)
 	}
