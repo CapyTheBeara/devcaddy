@@ -9,15 +9,15 @@ type Config struct {
 	Root        string
 	Watch       []*WatcherConfig
 	Watchers    []Watcher
-	PluginConfs []*ProcessorConfig `json:"plugins"`
-	Processors  []*Processor
+	PluginConfs []*PluginConfig `json:"plugins"`
+	Plugins     []*Plugin
 	Files       []*File
 	Store       *Store
 	outC        chan *File
 }
 
-func (c *Config) GetProcessor(name string) *Processor {
-	for _, p := range c.Processors {
+func (c *Config) GetPlugin(name string) *Plugin {
+	for _, p := range c.Plugins {
 		if name == p.Name {
 			return p
 		}
@@ -61,16 +61,16 @@ func (c *Config) PopulateStore(done chan bool) *Store {
 	return c.Store
 }
 
-func (c *Config) makeProcessors() {
+func (c *Config) makePlugins() {
 	for _, pl := range c.PluginConfs {
-		p := NewCommandProcessor(pl)
+		p := NewCommandPlugin(pl)
 
 		if pl.PipeTo != "" {
-			pipeP := c.GetProcessor(pl.PipeTo)
+			pipeP := c.GetPlugin(pl.PipeTo)
 			p.OutC = pipeP.InC
 		}
 
-		c.Processors = append(c.Processors, p)
+		c.Plugins = append(c.Plugins, p)
 	}
 	return
 }
@@ -105,7 +105,7 @@ func NewConfig(cfg []byte) *Config {
 		f.Type = "merge"
 	}
 
-	config.makeProcessors()
+	config.makePlugins()
 	config.Store = NewStore(config.Root, &config)
 
 	return &config

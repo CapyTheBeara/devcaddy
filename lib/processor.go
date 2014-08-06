@@ -7,19 +7,19 @@ import (
 
 const FILE_PATH_SPLITTER = "__SERVER_FILE_PATH__="
 
-type ProcessorConfig struct {
+type PluginConfig struct {
 	Name, Command, Args, PipeTo string
 	LogOnly, NoOutput           bool
 }
 
-type Processor struct {
-	ProcessorConfig
+type Plugin struct {
+	PluginConfig
 	Transform func(*File) *File
 	InC       chan *File
 	OutC      chan *File
 }
 
-func (p *Processor) listen() {
+func (p *Plugin) listen() {
 	go func() {
 		for {
 			select {
@@ -37,19 +37,19 @@ func (p *Processor) listen() {
 	}()
 }
 
-func NewProcessor(cfg *ProcessorConfig, fn func(*File) *File) *Processor {
-	p := &Processor{
-		ProcessorConfig: *cfg,
-		Transform:       fn,
-		InC:             make(chan *File),
-		OutC:            make(chan *File),
+func NewPlugin(cfg *PluginConfig, fn func(*File) *File) *Plugin {
+	p := &Plugin{
+		PluginConfig: *cfg,
+		Transform:    fn,
+		InC:          make(chan *File),
+		OutC:         make(chan *File),
 	}
 
 	p.listen()
 	return p
 }
 
-func NewCommandProcessor(cfg *ProcessorConfig) *Processor {
+func NewCommandPlugin(cfg *PluginConfig) *Plugin {
 	args := strings.Split(cfg.Args, " ")
 
 	fn := func(f *File) *File {
@@ -76,5 +76,5 @@ func NewCommandProcessor(cfg *ProcessorConfig) *Processor {
 		return res
 	}
 
-	return NewProcessor(cfg, fn)
+	return NewPlugin(cfg, fn)
 }

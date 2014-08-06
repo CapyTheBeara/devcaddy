@@ -25,7 +25,7 @@ func TestFileWatcher(t *testing.T) {
 				Files: []string{"foo/index.js", "bar/main.js"},
 			}
 
-			config := Config{Processors: []*Processor{}}
+			config := Config{Plugins: []*Plugin{}}
 			w := NewWatcher(dir, make(chan *File), &c, &config)
 
 			Convey("GetAllFiles passes the correct files unmodified if no processor given", func() {
@@ -76,10 +76,10 @@ func TestFileWatcher(t *testing.T) {
 				PluginNames: []string{"zzz"},
 			}
 
-			p := NewProcessor(&ProcessorConfig{Name: "zzz"}, func(f *File) *File {
+			p := NewPlugin(&PluginConfig{Name: "zzz"}, func(f *File) *File {
 				return &File{Name: "zzz"}
 			})
-			config := Config{Processors: []*Processor{p}}
+			config := Config{Plugins: []*Plugin{p}}
 			w := NewWatcher(dir, make(chan *File), &c, &config)
 
 			<-w.Ready()
@@ -109,16 +109,16 @@ func TestDirWatcher(t *testing.T) {
 			PluginNames: []string{"transpile-js"},
 		}
 
-		p := NewCommandProcessor(&ProcessorConfig{
+		p := NewCommandPlugin(&PluginConfig{
 			Name:    "transpile-js",
 			Command: "echo",
 			Args:    "-n",
 		})
 
-		config := Config{Processors: []*Processor{p}}
+		config := Config{Plugins: []*Plugin{p}}
 		w := NewWatcher("", make(chan *File), &c, &config)
 
-		Convey("GetAllFiles passes the correct files modified by Processors", func() {
+		Convey("GetAllFiles passes the correct files modified by Plugins", func() {
 			defer removeTestDir(t, dir)
 
 			doneC := make(chan bool)

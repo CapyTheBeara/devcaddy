@@ -62,10 +62,10 @@ const cfg2 = `
 }
 `
 
-func TestProcessorCreation(t *testing.T) {
-	Convey("Processors from the config", t, func() {
+func TestPluginCreation(t *testing.T) {
+	Convey("Plugins from the config", t, func() {
 		c := NewConfig([]byte(cfg2))
-		p := c.Processors[0]
+		p := c.Plugins[0]
 
 		Convey("Names should be correct", func() {
 			So(p.Name, ShouldEqual, "transpile-js")

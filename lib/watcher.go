@@ -42,7 +42,7 @@ type Watcher interface {
 	GetAllFiles() int
 	OutChan() chan *File
 	Ready() chan bool
-	ProcessorRes() chan *File
+	PluginRes() chan *File
 	addWatchDirs()
 	matchesFile(string) bool
 	fsWatcher() *fsnotify.Watcher
@@ -58,31 +58,31 @@ func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Co
 	}
 
 	w := watcher{
-		Root:       root,
-		Dir:        dir,
-		OutC:       outC,
-		fsw:        fsw,
-		ready:      make(chan bool),
-		procRes:    make(chan *File),
-		events:     make(map[string]time.Time),
-		Processors: []*Processor{},
+		Root:    root,
+		Dir:     dir,
+		OutC:    outC,
+		fsw:     fsw,
+		ready:   make(chan bool),
+		procRes: make(chan *File),
+		events:  make(map[string]time.Time),
+		Plugins: []*Plugin{},
 	}
 
 	if len(c.PluginNames) == 0 {
-		p := NewProcessor(&ProcessorConfig{}, func(f *File) *File {
+		p := NewPlugin(&PluginConfig{}, func(f *File) *File {
 			return f
 		})
 		p.OutC = w.procRes
-		w.Processors = append(w.Processors, p)
+		w.Plugins = append(w.Plugins, p)
 
 	} else {
 		for _, name := range c.PluginNames {
-			p := config.GetProcessor(name)
+			p := config.GetPlugin(name)
 
 			if p.PipeTo == "" {
 				p.OutC = w.procRes
 			}
-			w.Processors = append(w.Processors, p)
+			w.Plugins = append(w.Plugins, p)
 		}
 	}
 	return w
@@ -94,7 +94,7 @@ type watcher struct {
 	ready         chan bool
 	fsw           *fsnotify.Watcher
 	events        map[string]time.Time
-	Processors    []*Processor
+	Plugins       []*Plugin
 }
 
 func (w *watcher) OutChan() chan *File {
@@ -105,7 +105,7 @@ func (w *watcher) Ready() chan bool {
 	return w.ready
 }
 
-func (w *watcher) ProcessorRes() chan *File {
+func (w *watcher) PluginRes() chan *File {
 	return w.procRes
 }
 
@@ -120,9 +120,9 @@ func (w *watcher) addWatchDir(path string) {
 	}
 }
 
-func (w *watcher) filterProcessorRes() {
+func (w *watcher) filterPluginRes() {
 	for {
-		f := <-w.ProcessorRes()
+		f := <-w.PluginRes()
 
 		if f == nil {
 			continue
@@ -148,7 +148,7 @@ func (w *watcher) listen(wa Watcher) {
 		w.ready <- true
 	}()
 
-	go w.filterProcessorRes()
+	go w.filterPluginRes()
 
 	for {
 		select {
@@ -193,7 +193,7 @@ func (w *watcher) processFile(path string, op fsnotify.Op) int {
 	f := NewFile(path, op)
 
 	i := 0
-	for _, p := range w.Processors {
+	for _, p := range w.Plugins {
 		if !p.LogOnly && !p.NoOutput {
 			i++
 		}

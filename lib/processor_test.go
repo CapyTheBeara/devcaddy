@@ -10,17 +10,17 @@ func createFile() *File {
 	return &File{Name: "foo.js", Content: "hello"}
 }
 
-func TestProcessor(t *testing.T) {
+func TestPlugin(t *testing.T) {
 	inputFile := createFile()
 
-	Convey("Given a Processor with a transformer function", t, func() {
+	Convey("Given a Plugin with a transformer function", t, func() {
 
 		fn := func(f *File) *File {
 			return &File{Name: f.Name + "1", Content: f.Content + "!"}
 		}
 
 		Convey("It can manipulate it's input", func() {
-			p := NewProcessor(&ProcessorConfig{}, fn)
+			p := NewPlugin(&PluginConfig{}, fn)
 			p.InC <- inputFile
 			res := <-p.OutC
 
@@ -29,7 +29,7 @@ func TestProcessor(t *testing.T) {
 		})
 
 		Convey("It can be configured to not send it's transformer output", func() {
-			p := NewProcessor(&ProcessorConfig{NoOutput: true}, fn)
+			p := NewPlugin(&PluginConfig{NoOutput: true}, fn)
 			p.InC <- inputFile
 			res := <-p.OutC
 
@@ -38,12 +38,12 @@ func TestProcessor(t *testing.T) {
 	})
 }
 
-func TestCommandProcessor(t *testing.T) {
+func TestCommandPlugin(t *testing.T) {
 	inputFile := createFile()
 
-	Convey("Given a CommandProcessor", t, func() {
+	Convey("Given a CommandPlugin", t, func() {
 		Convey("An input file's name and content is sent as params", func() {
-			p := NewCommandProcessor(&ProcessorConfig{
+			p := NewCommandPlugin(&PluginConfig{
 				Command: "echo",
 				Args:    "-n",
 			})
@@ -55,7 +55,7 @@ func TestCommandProcessor(t *testing.T) {
 		})
 
 		Convey("Command error is added to the output", func() {
-			p := NewCommandProcessor(&ProcessorConfig{
+			p := NewCommandPlugin(&PluginConfig{
 				Command: "node",
 				Args:    "aasdfssdf.js",
 			})
@@ -68,7 +68,7 @@ func TestCommandProcessor(t *testing.T) {
 		})
 
 		Convey("Command can change the output file's name", func() {
-			p := NewCommandProcessor(&ProcessorConfig{
+			p := NewCommandPlugin(&PluginConfig{
 				Command: "echo",
 				Args:    "-n __SERVER_FILE_PATH__=",
 			})
