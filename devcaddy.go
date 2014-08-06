@@ -14,7 +14,7 @@ func main() {
 
 	done := make(chan bool)
 
-	cfg, err := ioutil.ReadFile("devcaddy_config.json")
+	cfg, err := ioutil.ReadFile("devcaddy.json")
 	if err != nil {
 		log.Fatalln("[error] Problem reading devcaddy_config.json", err)
 	}

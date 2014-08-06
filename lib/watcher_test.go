@@ -284,7 +284,7 @@ func TestProxyWatcher(t *testing.T) {
 		makeTestFile(t, dir, "styles/nope.foo", "nope", 0)
 
 		c := WatcherConfig{
-			Dir:         dir,
+			Dir:         "styles",
 			Ext:         "scss",
 			Proxy:       "styles/app.scss",
 			PluginNames: []string{"sass"},
@@ -297,7 +297,7 @@ func TestProxyWatcher(t *testing.T) {
 		})
 
 		config := Config{Plugins: []*Plugin{p}}
-		w := NewWatcher("", make(chan *File), &c, &config)
+		w := NewWatcher(dir, make(chan *File), &c, &config)
 
 		Convey("Instead of a watched file being sent to the plugin, the proxy is sent instead", func() {
 			defer removeTestDir(t, dir)
