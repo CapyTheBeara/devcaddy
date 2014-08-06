@@ -48,7 +48,7 @@ type Watcher interface {
 	fsWatcher() *fsnotify.Watcher
 	listen(Watcher)
 	handleNewDir(string)
-	processFile(string, fsnotify.Op) int
+	sendFileToPlugin(string, fsnotify.Op) int
 }
 
 func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Config) watcher {
@@ -120,28 +120,6 @@ func (w *watcher) addWatchDir(path string) {
 	}
 }
 
-func (w *watcher) filterPluginRes() {
-	for {
-		f := <-w.PluginRes()
-
-		if f == nil {
-			continue
-		}
-
-		if f.LogOnly {
-			if f.Content != "" {
-				Plog.PrintC("info", f.Content)
-			}
-			continue
-		}
-
-		if f.Error != nil {
-			Plog.PrintC("plugin error", f.Content)
-		}
-		w.OutChan() <- f
-	}
-}
-
 func (w *watcher) listen(wa Watcher) {
 	// don't require reading from ready
 	go func() {
@@ -183,7 +161,7 @@ func (w *watcher) listen(wa Watcher) {
 				continue
 			}
 
-			wa.processFile(evt.Name, op)
+			wa.sendFileToPlugin(evt.Name, op)
 
 		case err := <-w.fsWatcher().Errors:
 			if err != nil && err.Error() != "" {
@@ -193,7 +171,7 @@ func (w *watcher) listen(wa Watcher) {
 	}
 }
 
-func (w *watcher) processFile(path string, op fsnotify.Op) int {
+func (w *watcher) sendFileToPlugin(path string, op fsnotify.Op) int {
 	f := NewFile(path, op)
 
 	i := 0
@@ -205,4 +183,30 @@ func (w *watcher) processFile(path string, op fsnotify.Op) int {
 	}
 
 	return i
+}
+
+func (w *watcher) filterPluginRes() {
+	for {
+		f := <-w.PluginRes()
+
+		if f == nil {
+			continue
+		}
+
+		if f.LogOnly {
+			if f.Content != "" {
+				Plog.PrintC("info", f.Content)
+			}
+
+			if f.Error != nil {
+				log.Println("[error]", f.Error)
+			}
+			continue
+		}
+
+		if f.Error != nil {
+			Plog.PrintC("plugin error", f.Content)
+		}
+		w.OutChan() <- f
+	}
 }

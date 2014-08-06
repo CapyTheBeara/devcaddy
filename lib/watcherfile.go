@@ -14,7 +14,7 @@ func (w *FileWatcher) GetAllFiles() int {
 	for _, name := range w.Files {
 		size++
 		path := filepath.Join(w.Root, w.Dir, name)
-		w.processFile(path, 0)
+		w.sendFileToPlugin(path, 0)
 	}
 	return size
 }

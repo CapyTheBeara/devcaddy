@@ -21,7 +21,7 @@ func (w *DirWatcher) GetAllFiles() int {
 			log.Fatalln("[error] Problem getting files:", err)
 		}
 		if !info.IsDir() && strings.HasSuffix(path, w.Ext) {
-			size += w.processFile(path, 0)
+			size += w.sendFileToPlugin(path, 0)
 		}
 		return nil
 	})
