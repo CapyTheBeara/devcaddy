@@ -6,14 +6,14 @@ import (
 )
 
 type Config struct {
-	Root       string
-	Watch      []*WatcherConfig
-	Watchers   []Watcher
-	Plugins    []*ProcessorConfig
-	Processors []*Processor
-	Files      []*File
-	Store      *Store
-	outC       chan *File
+	Root        string
+	Watch       []*WatcherConfig
+	Watchers    []Watcher
+	PluginConfs []*ProcessorConfig `json:"plugins"`
+	Processors  []*Processor
+	Files       []*File
+	Store       *Store
+	outC        chan *File
 }
 
 func (c *Config) GetProcessor(name string) *Processor {
@@ -62,7 +62,7 @@ func (c *Config) PopulateStore(done chan bool) *Store {
 }
 
 func (c *Config) makeProcessors() {
-	for _, pl := range c.Plugins {
+	for _, pl := range c.PluginConfs {
 		p := NewCommandProcessor(pl)
 
 		if pl.PipeTo != "" {
