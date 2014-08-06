@@ -61,7 +61,7 @@ func NewCommandProcessor(cfg *ProcessorConfig) *Processor {
 
 		cmd := exec.Command(cfg.Command, append(args, f.Name, f.Content)...)
 
-		b, err := cmd.Output()
+		b, err := cmd.CombinedOutput()
 		if err != nil {
 			res.Error = err
 		}
@@ -69,7 +69,7 @@ func NewCommandProcessor(cfg *ProcessorConfig) *Processor {
 		split := strings.Split(string(b), FILE_PATH_SPLITTER)
 
 		if len(split) > 1 {
-			res.Name = split[1]
+			res.Name = strings.TrimSpace(split[1])
 		}
 
 		res.Content = split[0]

@@ -56,13 +56,14 @@ func TestCommandProcessor(t *testing.T) {
 
 		Convey("Command error is added to the output", func() {
 			p := NewCommandProcessor(&ProcessorConfig{
-				Command: "a",
+				Command: "node",
+				Args:    "aasdfssdf.js",
 			})
 			p.InC <- inputFile
 			res := <-p.OutC
 
 			So(res.Name, ShouldEqual, "foo.js")
-			So(res.Content, ShouldEqual, "")
+			So(res.Content, ShouldContainSubstring, "Cannot find module")
 			So(res.Error, ShouldNotBeNil)
 		})
 
@@ -74,7 +75,7 @@ func TestCommandProcessor(t *testing.T) {
 			p.InC <- inputFile
 			res := <-p.OutC
 
-			So(res.Name, ShouldEqual, " foo.js hello")
+			So(res.Name, ShouldEqual, "foo.js hello")
 			So(res.Content, ShouldEqual, "")
 		})
 	})
