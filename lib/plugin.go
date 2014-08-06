@@ -50,8 +50,6 @@ func NewPlugin(cfg *PluginConfig, fn func(*File) *File) *Plugin {
 }
 
 func NewCommandPlugin(cfg *PluginConfig) *Plugin {
-	args := strings.Split(cfg.Args, " ")
-
 	fn := func(f *File) *File {
 		res := &File{
 			Name:    f.Name,
@@ -59,7 +57,22 @@ func NewCommandPlugin(cfg *PluginConfig) *Plugin {
 			Op:      f.Op,
 		}
 
-		cmd := exec.Command(cfg.Command, append(args, f.Name, f.Content)...)
+		argStr := cfg.Args
+		if !strings.Contains(argStr, "{{fileName}}") && !strings.Contains(argStr, "{{fileContent}}") {
+			argStr += " {{fileName}} {{fileContent}}"
+		}
+
+		// TODO - clean then use regexp.Split
+		args := strings.Split(argStr, " ")
+		for i, arg := range args {
+			if strings.Contains(arg, "{{fileName}}") {
+				args[i] = strings.Replace(arg, "{{fileName}}", f.Name, 1)
+			} else {
+				args[i] = strings.Replace(arg, "{{fileContent}}", f.Content, 1)
+			}
+		}
+
+		cmd := exec.Command(cfg.Command, args...)
 
 		b, err := cmd.CombinedOutput()
 		if err != nil {

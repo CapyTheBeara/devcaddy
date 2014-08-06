@@ -78,5 +78,43 @@ func TestCommandPlugin(t *testing.T) {
 			So(res.Name, ShouldEqual, "foo.js hello")
 			So(res.Content, ShouldEqual, "")
 		})
+
+		Convey("Args can specify whether file path or content is sent - ", func() {
+			Convey("Only file path can be sent", func() {
+				p := NewCommandPlugin(&PluginConfig{
+					Command: "echo",
+					Args:    "-n {{fileName}}",
+				})
+				p.InC <- inputFile
+				res := <-p.OutC
+
+				So(res.Name, ShouldEqual, "foo.js")
+				So(res.Content, ShouldEqual, "foo.js")
+			})
+
+			Convey("Only file content can be sent", func() {
+				p := NewCommandPlugin(&PluginConfig{
+					Command: "echo",
+					Args:    "-n {{fileContent}}",
+				})
+				p.InC <- inputFile
+				res := <-p.OutC
+
+				So(res.Name, ShouldEqual, "foo.js")
+				So(res.Content, ShouldEqual, "hello")
+			})
+
+			Convey("Only additional args can be sent after {{}}", func() {
+				p := NewCommandPlugin(&PluginConfig{
+					Command: "echo",
+					Args:    "-n {{fileContent}} bar",
+				})
+				p.InC <- inputFile
+				res := <-p.OutC
+
+				So(res.Name, ShouldEqual, "foo.js")
+				So(res.Content, ShouldEqual, "hello bar")
+			})
+		})
 	})
 }
