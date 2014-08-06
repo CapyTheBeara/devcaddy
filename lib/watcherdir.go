@@ -9,8 +9,7 @@ import (
 
 type DirWatcher struct {
 	watcher
-	Ext        string
-	Processors []*Processor
+	Ext string
 }
 
 func (w *DirWatcher) GetAllFiles() int {
@@ -22,8 +21,7 @@ func (w *DirWatcher) GetAllFiles() int {
 			log.Fatalln("[error] Problem getting files:", err)
 		}
 		if !info.IsDir() && strings.HasSuffix(path, w.Ext) {
-			f := w.getFile(path)
-			size += w.processFile(f)
+			size += w.processFile(path, 0)
 		}
 		return nil
 	})
@@ -41,7 +39,7 @@ func (w *DirWatcher) addWatchDirs() {
 		}
 
 		if info.IsDir() {
-			Plog.Printf("[watching] %s for .%s files", path, w.Ext)
+			Plog.PrintC("watching", "*."+w.Ext+": "+path)
 			w.addWatchDir(path)
 		}
 		return nil
@@ -50,18 +48,6 @@ func (w *DirWatcher) addWatchDirs() {
 
 func (w *DirWatcher) handleNewDir(name string) {
 	w.addWatchDir(name)
-}
-
-func (w *DirWatcher) processFile(f *File) int {
-	i := 0
-	for _, p := range w.Processors {
-		if !p.LogOnly && !p.NoOutput {
-			i++
-		}
-		p.InC <- f
-	}
-
-	return i
 }
 
 func (w *DirWatcher) fullPath() string {

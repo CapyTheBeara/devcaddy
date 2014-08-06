@@ -19,49 +19,75 @@ func TestFileWatcher(t *testing.T) {
 		makeTestFile(t, dir+"/bar", "main.js", "1", 0)
 		makeTestFile(t, dir+"/foo", "nope.foo", "nope", 0)
 
-		c := WatcherConfig{
-			Dir:   dir,
-			Files: []string{"foo/index.js", "bar/main.js"},
-		}
-		config := Config{Processors: []*Processor{}}
-		w := NewWatcher(dir, make(chan *File), &c, &config)
+		Convey("If no processors are given", func() {
+			c := WatcherConfig{
+				Dir:   dir,
+				Files: []string{"foo/index.js", "bar/main.js"},
+			}
 
-		Convey("GetAllFiles passes the correct files unmodified", func() {
-			defer removeTestDir(t, dir)
+			config := Config{Processors: []*Processor{}}
+			w := NewWatcher(dir, make(chan *File), &c, &config)
 
-			doneC := make(chan bool)
-			go func() {
+			Convey("GetAllFiles passes the correct files unmodified if no processor given", func() {
+				defer removeTestDir(t, dir)
+
+				doneC := make(chan bool)
+				go func() {
+					f1 := <-w.OutChan()
+					So(f1.Name, ShouldEqual, "../tmp1/foo/index.js")
+					So(f1.Content, ShouldEqual, "var foo;\n")
+
+					f2 := <-w.OutChan()
+					So(f2.Name, ShouldEqual, "../tmp1/bar/main.js")
+					doneC <- true
+				}()
+
+				w.GetAllFiles()
+				<-doneC
+			})
+
+			Convey("A file change on a relavent file is detected", func() {
+				defer removeTestDir(t, dir)
+
+				<-w.Ready()
+				updateTestFile(t, "../tmp1/foo/index.js", "s")
+
 				f1 := <-w.OutChan()
 				So(f1.Name, ShouldEqual, "../tmp1/foo/index.js")
-				So(f1.Content, ShouldEqual, "var foo;\n")
+				So(f1.Content, ShouldEqual, "var foo;\ns")
 
-				f2 := <-w.OutChan()
-				So(f2.Name, ShouldEqual, "../tmp1/bar/main.js")
-				doneC <- true
-			}()
+				makeTestFile(t, dir, "app.hbs", "1", 20)
 
-			w.GetAllFiles()
-			<-doneC
+				select {
+				case <-w.OutChan():
+					So("Failed - Wrong file received", ShouldBeNil)
+				default:
+					So("Passed - wrong file not received", ShouldNotBeBlank)
+				}
+			})
 		})
 
-		Convey("A file change on a relavent file is detected", func() {
+		Convey("If a processor is given, the file is modified by the processor", func() {
 			defer removeTestDir(t, dir)
+
+			c := WatcherConfig{
+				Dir:     dir,
+				Files:   []string{"foo/index.js", "bar/main.js"},
+				Plugins: []string{"zzz"},
+			}
+
+			p := NewProcessor(&ProcessorConfig{Name: "zzz"}, func(f *File) *File {
+				return &File{Name: "zzz"}
+			})
+			config := Config{Processors: []*Processor{p}}
+			w := NewWatcher(dir, make(chan *File), &c, &config)
 
 			<-w.Ready()
 			updateTestFile(t, "../tmp1/foo/index.js", "s")
 
 			f1 := <-w.OutChan()
-			So(f1.Name, ShouldEqual, "../tmp1/foo/index.js")
-			So(f1.Content, ShouldEqual, "var foo;\ns")
+			So(f1.Name, ShouldEqual, "zzz")
 
-			makeTestFile(t, dir, "app.hbs", "1", 20)
-
-			select {
-			case <-w.OutChan():
-				So("Failed - Wrong file received", ShouldBeNil)
-			default:
-				So("Passed - wrong file not received", ShouldNotBeBlank)
-			}
 		})
 	})
 }
