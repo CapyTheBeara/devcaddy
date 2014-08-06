@@ -19,7 +19,7 @@ func TestFileWatcher(t *testing.T) {
 		makeTestFile(t, dir+"/bar", "main.js", "1", 0)
 		makeTestFile(t, dir+"/foo", "nope.foo", "nope", 0)
 
-		Convey("If no processors are given", func() {
+		Convey("If no plugins are given", func() {
 			c := WatcherConfig{
 				Dir:   dir,
 				Files: []string{"foo/index.js", "bar/main.js"},
@@ -28,7 +28,7 @@ func TestFileWatcher(t *testing.T) {
 			config := Config{Plugins: []*Plugin{}}
 			w := NewWatcher(dir, make(chan *File), &c, &config)
 
-			Convey("GetAllFiles passes the correct files unmodified if no processor given", func() {
+			Convey("GetAllFiles passes the correct files unmodified if no plugin given", func() {
 				defer removeTestDir(t, dir)
 
 				doneC := make(chan bool)
@@ -67,7 +67,7 @@ func TestFileWatcher(t *testing.T) {
 			})
 		})
 
-		Convey("If a processor is given, the file is modified by the processor", func() {
+		Convey("If a plugin is given, the file is modified by the plugin", func() {
 			defer removeTestDir(t, dir)
 
 			c := WatcherConfig{
