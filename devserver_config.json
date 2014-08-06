@@ -1,0 +1,53 @@
+{
+    "root": "mockapp",
+    "plugins": [
+        {
+            "name": "es6-transpiler",
+            "command": "node",
+            "args": "mockapp/plugins/es6-transpiler.js"
+        },
+        {
+            "name": "silent",
+            "command": "echo",
+            "args": "silent",
+            "noOutput": true
+        },
+        {
+            "name": "lint",
+            "command": "echo",
+            "args": "lint",
+            "logOnly": true
+        },
+        {
+            "name": "template",
+            "command": "echo",
+            "args": "template",
+            "pipeTo": "es6-transpiler"
+        }
+    ],
+    "files": [
+        {
+            "name": "app.js",
+            "dir": "app",
+            "ext": "js",
+            "plugins": ["es6-transpiler", "silent", "lint"]
+        },
+        {
+            "name": "vendor.js",
+            "dir": "vendor",
+            "files": ["bar/index.js", "baz/main.js"]
+        },
+        {
+            "name": "index.html",
+            "dir": "app",
+            "files": ["index.html"]
+        }
+    ],
+    "watch": [
+        {
+            "dir": "app/templates",
+            "ext": "hbs",
+            "plugins": ["template"]
+        }
+    ]
+}
