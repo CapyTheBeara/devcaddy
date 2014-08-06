@@ -83,7 +83,7 @@ func (c *Config) makeWatchers() {
 			Dir:         f.Dir,
 			Ext:         f.Ext,
 			Files:       f.Files,
-			PluginNames: f.Plugins,
+			PluginNames: f.PluginNames,
 		}
 		c.Watch = append(c.Watch, &wc)
 	}

@@ -18,16 +18,16 @@ func NewFile(name string, op fsnotify.Op) *File {
 }
 
 type File struct {
-	Name    string
-	Content string
-	Type    string
-	Dir     string
-	Ext     string
-	Files   []string
-	Error   error
-	Plugins []string `json:"plugins`
-	LogOnly bool
-	Op      fsnotify.Op
+	Name        string
+	Content     string
+	Type        string
+	Dir         string
+	Ext         string
+	Files       []string
+	Error       error
+	PluginNames []string `json:"plugins"`
+	LogOnly     bool
+	Op          fsnotify.Op
 }
 
 func (f *File) IsDeleted() bool {
