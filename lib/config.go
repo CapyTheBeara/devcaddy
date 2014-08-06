@@ -45,7 +45,9 @@ func (c *Config) PopulateStore(done chan bool) *Store {
 				c.Store.Put(f.Name, f.Content, sendUpdate)
 			}
 
-			if size != -1 && i == size {
+			// TODO - fix this
+			// relates to watcher#processFile
+			if !sendUpdate && size != -1 && i >= size {
 				sendUpdate = true
 				done <- true
 			}
