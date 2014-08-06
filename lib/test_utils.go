@@ -56,3 +56,9 @@ func updateTestFile(t *testing.T, name, content string) {
 	f.Sync()
 	f.Close()
 }
+
+func removeTestFile(t *testing.T, name string) {
+	if err := os.Remove(name); err != nil {
+		t.Fatal(err)
+	}
+}

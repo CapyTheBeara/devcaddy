@@ -11,14 +11,10 @@ import (
 	"code.google.com/p/go.net/websocket"
 )
 
-func init() {
-	assetTypes = map[string]string{
-		".js":  "text/javascript",
-		".css": "text/css",
-	}
+var assetTypes = map[string]string{
+	".js":  "text/javascript",
+	".css": "text/css",
 }
-
-var assetTypes map[string]string
 
 type WSMessage struct {
 	Message string
@@ -132,7 +128,7 @@ func (s *Server) Websocket() http.Handler {
 func (s *Server) listenForStoreUpdates() {
 	for {
 		name := <-s.Store.DidUpdate
-		Plog.Println("[server] updated:", name)
+		Plog.PrintC("server", "updated: "+name)
 		for ch, _ := range s.ReloadChans {
 			ch <- name
 		}
