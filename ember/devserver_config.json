@@ -1,0 +1,56 @@
+{
+    "root": "../ember-root",
+    "plugins": [
+        {
+            "name": "es6-transpiler",
+            "command": "node",
+            "args": "plugins/es6-transpiler.js"
+        },
+        {
+            "name": "ember-index-injector",
+            "command": "node",
+            "args": "plugins/ember-index-injector.js"
+        },
+        {
+            "name": "ember-template-compiler",
+            "command": "node",
+            "args": "plugins/ember-template-compiler.js",
+            "pipeTo": "es6-transpiler"
+        }
+    ],
+    "files": [
+        {
+            "name": "ember-root.js",
+            "dir": "app",
+            "ext": "js",
+            "plugins": ["es6-transpiler"]
+        },
+        {
+            "name": "vendor.js",
+            "dir": "vendor",
+            "files": [
+                "loader/loader.js",
+                "jquery/dist/jquery.js",
+                "handlebars/handlebars.js",
+                "ember/ember.js",
+                "ember-data/ember-data.js",
+                "ember-cli-shims/app-shims.js",
+                "ember-resolver/dist/modules/ember-resolver.js",
+                "ember-load-initializers/ember-load-initializers.js"
+            ]
+        },
+        {
+            "name": "index.html",
+            "dir": "app",
+            "files": ["index.html"],
+            "plugins": ["ember-index-injector"]
+        }
+    ],
+    "watch": [
+        {
+            "dir": "app/templates",
+            "ext": "hbs",
+            "plugins": ["ember-template-compiler"]
+        }
+    ]
+}
