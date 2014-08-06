@@ -17,6 +17,7 @@ var colors = map[string]string{
 	"magenta":      "35",
 	"server":       "35",
 	"cyan":         "36",
+	"info":         "36",
 }
 
 func Color(kind, text string) string {

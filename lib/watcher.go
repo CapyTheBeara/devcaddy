@@ -123,9 +123,13 @@ func (w *watcher) filterProcessorRes() {
 	for {
 		f := <-w.ProcessorRes()
 
-		if f == nil || f.LogOnly {
+		if f == nil {
+			continue
+		}
+
+		if f.LogOnly {
 			if f.Content != "" {
-				log.Println("[info]", f.Content)
+				Plog.PrintC("info", f.Content)
 			}
 			continue
 		}
