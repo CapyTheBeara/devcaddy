@@ -25,7 +25,7 @@ type File struct {
 	Ext     string
 	Files   []string
 	Error   error
-	Plugins []string
+	Plugins []string `json:"plugins`
 	LogOnly bool
 	Op      fsnotify.Op
 }
