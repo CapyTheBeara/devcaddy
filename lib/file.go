@@ -3,9 +3,7 @@ package lib
 import (
 	"io/ioutil"
 	"log"
-	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"gopkg.in/fsnotify.v0"
@@ -57,51 +55,14 @@ func (file *File) MergeStoreFiles(s *Store) string {
 			contents = append(contents, s.Get(path))
 		}
 	} else {
-		names := []string{}
-		for n, _ := range s.Files {
-			if strings.Contains(n, dir) && strings.HasSuffix(n, "."+file.Ext) {
-				names = append(names, n)
+		for _, f := range s.GetAll() {
+			if strings.Contains(f.Name, dir) && strings.HasSuffix(f.Name, "."+file.Ext) {
+				contents = append(contents, f.Content)
 			}
-		}
-
-		sort.Strings(names)
-
-		for _, n := range names {
-			contents = append(contents, s.Get(n))
 		}
 	}
 
 	return strings.Join(contents, "\n")
-}
-
-func (f *File) GetDefFiles(root string, fn func(string, string)) {
-	dir := filepath.Join(root, f.Dir)
-
-	if f.Ext == "" && len(f.Files) == 0 {
-		f.Files = []string{f.Name}
-	}
-
-	filter := f.filterFn(dir)
-
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() && filter(path) {
-			b, err := ioutil.ReadFile(path)
-			if err != nil {
-				return err
-			}
-
-			fn(path, string(b))
-		}
-		return nil
-	})
-
-	if err != nil {
-		panic(err)
-	}
 }
 
 func (f *File) filterFn(dir string) (filter func(string) bool) {

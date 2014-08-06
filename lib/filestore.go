@@ -1,5 +1,9 @@
 package lib
 
+import (
+	"sort"
+)
+
 var store *Store
 
 type Store struct {
@@ -38,6 +42,20 @@ func (s *Store) Get(name string) string {
 func (s *Store) Delete(name string) {
 	delete(s.Files, name)
 	s.doUpdate(name)
+}
+
+func (s *Store) GetAll() (files []*File) {
+	names := []string{}
+	for name, _ := range s.Files {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	for _, n := range names {
+		files = append(files, s.Files[n])
+	}
+	return
 }
 
 func (s *Store) doUpdate(name string) {

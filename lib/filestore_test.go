@@ -82,6 +82,13 @@ func TestFileAccessing(t *testing.T) {
 		Convey("vendor.js file has the correct content", func() {
 			So(store.Get("vendor.js"), ShouldEqual, "qux\nbax")
 		})
+
+		Convey("It can retrieve all files ordered by name", func() {
+			files := store.GetAll()
+
+			So(files[0].Name, ShouldEqual, "/proj/app/controllers/foo.js")
+			So(files[4].Name, ShouldEqual, "/proj/app/styles/foo.css")
+		})
 	})
 }
 
