@@ -2,6 +2,7 @@ package lib
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -9,6 +10,12 @@ import (
 
 	"gopkg.in/fsnotify.v0"
 )
+
+func NewFile(name string, op fsnotify.Op) *File {
+	f := File{Name: name, Op: op}
+	f.GetFile()
+	return &f
+}
 
 type File struct {
 	Name    string
@@ -21,6 +28,23 @@ type File struct {
 	Plugins []string
 	LogOnly bool
 	Op      fsnotify.Op
+}
+
+func (f *File) IsDeleted() bool {
+	return f.Op == fsnotify.Remove || f.Op == fsnotify.Rename
+}
+
+func (f *File) GetFile() {
+	if f.IsDeleted() {
+		return
+	}
+
+	b, err := ioutil.ReadFile(f.Name)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	f.Content = string(b)
 }
 
 func (file *File) MergeStoreFiles(s *Store) string {
