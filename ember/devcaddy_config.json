@@ -1,5 +1,4 @@
 {
-    "root": "../ember-root",
     "plugins": [
         {
             "name": "es6-transpiler",
@@ -16,14 +15,26 @@
             "command": "node",
             "args": "plugins/ember-template-compiler.js",
             "pipeTo": "es6-transpiler"
+        },
+        {
+            "name": "jshint",
+            "command": "jshint",
+            "args": "{{fileName}}",
+            "logOnly": true
+        },
+        {
+            "name": "sass",
+            "command": "node",
+            "args": "plugins/sass.js app/styles/sass app/styles/app.css",
+            "logOnly": true
         }
     ],
     "files": [
         {
-            "name": "ember-root.js",
+            "name": "my-app.js",
             "dir": "app",
             "ext": "js",
-            "plugins": ["es6-transpiler"]
+            "plugins": ["es6-transpiler", "jshint"]
         },
         {
             "name": "vendor.js",
@@ -44,6 +55,11 @@
             "dir": "app",
             "files": ["index.html"],
             "plugins": ["ember-index-injector"]
+        },
+        {
+            "name": "my-app.css",
+            "dir": "app/styles",
+            "files": ["app.css"]
         }
     ],
     "watch": [
@@ -51,6 +67,12 @@
             "dir": "app/templates",
             "ext": "hbs",
             "plugins": ["ember-template-compiler"]
+        },
+        {
+            "dir": "app/styles/sass",
+            "ext": "scss",
+            "proxy": "app/styles/sass/app.scss",
+            "plugins": ["sass"]
         }
     ]
 }
