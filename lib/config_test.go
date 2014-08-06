@@ -110,5 +110,17 @@ func TestMakeStore(t *testing.T) {
 			name := <-store.DidUpdate
 			So(name, ShouldEqual, "../mockapp/app/foo.js")
 		})
+
+		Convey("Deleted files get removed from the store", func() {
+			name := "../mockapp/app/arggg.js"
+			makeTestFile(t, "../mockapp", "app/arggg.js", "arg!", 0)
+			n := <-store.DidUpdate
+			So(n, ShouldEqual, name)
+
+			removeTestFile(t, name)
+			<-store.DidUpdate
+			_, ok := store.Files[name]
+			So(ok, ShouldBeFalse)
+		})
 	})
 }

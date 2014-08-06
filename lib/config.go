@@ -27,6 +27,7 @@ func (c *Config) GetProcessor(name string) *Processor {
 	return nil
 }
 
+// TODO move this to where it makes more sense
 func (c *Config) PopulateStore(done chan bool) *Store {
 	size := -1
 	sendUpdate := false
@@ -36,7 +37,11 @@ func (c *Config) PopulateStore(done chan bool) *Store {
 		for f := range c.outC {
 			i++
 
-			c.Store.Put(f.Name, f.Content, sendUpdate)
+			if f.IsDeleted() {
+				c.Store.Delete(f.Name)
+			} else {
+				c.Store.Put(f.Name, f.Content, sendUpdate)
+			}
 
 			if size != -1 && i == size {
 				sendUpdate = true
