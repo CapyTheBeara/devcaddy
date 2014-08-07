@@ -15,13 +15,23 @@ type DirWatcher struct {
 func (w *DirWatcher) GetAllFiles() int {
 	size := 0
 	dir := filepath.Join(w.Root, w.Dir)
+	skip := false
 
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if skip {
+			return filepath.SkipDir
+		}
+
 		if err != nil {
 			log.Fatalln("[error] Problem getting files:", err)
 		}
+
 		if !info.IsDir() && strings.HasSuffix(path, w.Ext) {
 			size += w.sendFileToPlugin(path, 0)
+
+			if w.Proxy != "" {
+				skip = true
+			}
 		}
 		return nil
 	})

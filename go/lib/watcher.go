@@ -135,7 +135,7 @@ func (w *watcher) listen(wa Watcher) {
 		w.ready <- true
 	}()
 
-	go w.filterPluginRes()
+	go w.handlePluginRes()
 
 	for {
 		select {
@@ -170,7 +170,7 @@ func (w *watcher) listen(wa Watcher) {
 				continue
 			}
 
-			wa.sendFileToPlugin(evt.Name, op)
+			w.sendFileToPlugin(evt.Name, op)
 
 		case err := <-w.fsWatcher().Errors:
 			if err != nil && err.Error() != "" {
@@ -202,37 +202,17 @@ func (w *watcher) sendFileToPlugin(opath string, op fsnotify.Op) int {
 
 	i := 0
 	for _, p := range w.Plugins {
-		if !p.LogOnly && !p.NoOutput {
-			i++
-		}
+		i++
 		p.InC <- f
 	}
 
 	return i
 }
 
-func (w *watcher) filterPluginRes() {
+// TODO - don't need PluginRes anymore
+func (w *watcher) handlePluginRes() {
 	for {
 		f := <-w.PluginRes()
-
-		if f == nil {
-			continue
-		}
-
-		if f.LogOnly {
-			if f.Content != "" {
-				Plog.PrintC("info", f.Content)
-			}
-
-			if f.Error != nil {
-				log.Println("[error]", f.Error)
-			}
-			continue
-		}
-
-		if f.Error != nil {
-			Plog.PrintC("plugin error", f.Content)
-		}
 		w.OutChan() <- f
 	}
 }

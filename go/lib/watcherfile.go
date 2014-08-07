@@ -9,6 +9,7 @@ type FileWatcher struct {
 	Files []string
 }
 
+// TODO - check for proxy
 func (w *FileWatcher) GetAllFiles() int {
 	size := 0
 	for _, name := range w.Files {

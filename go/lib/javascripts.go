@@ -11,6 +11,16 @@ func reloadScript(port string) string {
             livereloadWebSocket.onmessage = function(msg) {
                 livereloadWebSocket.close();
                 window.location.reload(true);
+
+// try {
+//   var link = document.querySelector('link[href="assets/caddytest.css"]');
+//   var linkCopy = link.cloneNode();
+//   link.remove();
+//   var h = document.querySelector('head');
+//   h.appendChild(linkCopy);
+// } catch (e) {
+//   window.location.reload(true);
+// }
             };
             livereloadWebSocket.onopen = function(x) {
               console.log('[ws] Connection opened', new Date());

@@ -39,14 +39,27 @@ func (c *Config) PopulateStore(done chan bool) *Store {
 		for f := range c.outC {
 			i++
 
-			if f.IsDeleted() {
-				c.Store.Delete(f.Name)
-			} else {
-				c.Store.Put(f.Name, f.Content, sendUpdate)
+			if f == nil {
+				continue
 			}
 
-			// TODO - fix this
-			// relates to watcher#processFile
+			if f.Error != nil {
+				Plog.PrintC("plugin error", f.Content)
+				continue
+			}
+
+			if f.LogOnly {
+				if f.Content != "" {
+					Plog.PrintC("info", f.Content)
+				}
+			} else {
+				if f.IsDeleted() {
+					c.Store.Delete(f.Name)
+				} else {
+					c.Store.Put(f.Name, f.Content, sendUpdate)
+				}
+			}
+
 			if !sendUpdate && size != -1 && i >= size {
 				sendUpdate = true
 				done <- true
@@ -62,6 +75,7 @@ func (c *Config) PopulateStore(done chan bool) *Store {
 	}
 
 	size = n
+
 	return c.Store
 }
 

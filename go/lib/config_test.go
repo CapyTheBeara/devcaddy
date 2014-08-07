@@ -2,6 +2,7 @@ package lib
 
 import (
 	"testing"
+	// "time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -105,10 +106,19 @@ func TestMakeStore(t *testing.T) {
 			So(store.Get("../mockapp/app/templates/index.hbs"), ShouldEqual, "../mockapp/app/templates/index.hbs template ../mockapp/app/templates/index.hbs {{index}}\n\n")
 		})
 
-		Convey("After store is populated, watcher output goes to store", func() {
+		Convey("After store is populated, correct watcher output goes to store", func() {
 			updateTestFile(t, "../mockapp/app/foo.js", "")
 			name := <-store.DidUpdate
 			So(name, ShouldEqual, "../mockapp/app/foo.js")
+
+			// time.Sleep(time.Millisecond * 100)
+			// <-store.DidUpdate
+			// select {
+			// case <-store.DidUpdate:
+			// 	So("Fail - store should not have updated again", ShouldBeNil)
+			// default:
+			// 	So("Pass - store only updated once", ShouldNotBeBlank)
+			// }
 		})
 
 		Convey("Deleted files get removed from the store", func() {

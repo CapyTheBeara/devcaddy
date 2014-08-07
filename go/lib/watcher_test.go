@@ -180,6 +180,8 @@ func TestDirWatcher(t *testing.T) {
 			f = <-w.OutChan()
 			So(f.Name, ShouldEqual, "../tmp2/bar/main.js")
 
+			time.Sleep(time.Millisecond * 20)
+
 			select {
 			case <-w.OutChan():
 				So("Fails - shouldn't process the second event", ShouldBeNil)
@@ -195,10 +197,12 @@ func TestDirWatcher(t *testing.T) {
 			w.fsWatcher().Events <- evt
 
 			time.Sleep(time.Millisecond * 100)
+
 			w.fsWatcher().Events <- evt
 
 			f := <-w.OutChan()
 			So(f.Name, ShouldEqual, "../tmp2/foo.js")
+
 			time.Sleep(time.Millisecond * 20)
 
 			select {
@@ -257,6 +261,8 @@ func TestGroupAllWatcher(t *testing.T) {
 				So(f.Name, ShouldEqual, "../tmp3/styles/vendor/bar.scss")
 				So(f.Content, ShouldEqual, "1\n2\n3")
 
+				time.Sleep(time.Millisecond * 20)
+
 				select {
 				case <-w.OutChan():
 					So("Fail - Shouldn't get here", ShouldBeNil)
@@ -298,6 +304,33 @@ func TestProxyWatcher(t *testing.T) {
 
 		config := Config{Plugins: []*Plugin{p}}
 		w := NewWatcher(dir, make(chan *File), &c, &config)
+
+		Convey("GetAllFiles only passes proxy once", func() {
+			defer removeTestDir(t, dir)
+
+			<-w.Ready()
+
+			doneC := make(chan bool)
+			go func() {
+				f1 := <-w.OutChan()
+				So(f1.Name, ShouldEqual, "../tmp4/styles/app.scss")
+				So(f1.Content, ShouldEqual, "1")
+
+				time.Sleep(time.Millisecond * 20)
+
+				select {
+				case <-w.OutChan():
+					So("Fail - Shouldn't get here", ShouldBeNil)
+				default:
+
+					So("Pass - Proxy is not sent again", ShouldNotBeBlank)
+				}
+				doneC <- true
+			}()
+
+			w.GetAllFiles()
+			<-doneC
+		})
 
 		Convey("Instead of a watched file being sent to the plugin, the proxy is sent instead", func() {
 			defer removeTestDir(t, dir)
