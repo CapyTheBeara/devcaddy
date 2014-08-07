@@ -22,15 +22,16 @@ type Plugin struct {
 func (p *Plugin) listen() {
 	go func() {
 		for {
-			select {
-			case in := <-p.InC:
-				var out *File
+			in := <-p.InC
+			var out *File
 
-				if !p.NoOutput {
+			if !p.NoOutput {
+				go func() {
 					in.LogOnly = p.LogOnly
 					out = p.Transform(in)
-				}
-
+					p.OutC <- out
+				}()
+			} else {
 				p.OutC <- out
 			}
 		}
