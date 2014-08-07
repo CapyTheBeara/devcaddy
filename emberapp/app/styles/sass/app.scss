@@ -1,0 +1,12 @@
+@import "modules/_base";
+@import "modules/_partials";
+
+html, body {
+  margin: 10px;
+}
+
+h2 {
+  font-size: $size;
+  font-weight: bold;
+  color: $foo;
+}

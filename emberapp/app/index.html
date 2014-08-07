@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Caddytest</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {{BASE_TAG}}
+
+    <link rel="stylesheet" href="assets/vendor.css">
+    <link rel="stylesheet" href="assets/caddytest.css">
+  </head>
+  <body>
+    <script>
+      window.CaddytestENV = {{ENV}};
+      window.EmberENV = window.CaddytestENV.EmberENV;
+    </script>
+    <script src="assets/vendor.js"></script>
+    <script src="assets/caddytest.js"></script>
+    <script>
+      window.Caddytest = require('caddytest/app')['default'].create(CaddytestENV.APP);
+    </script>
+  </body>
+</html>
