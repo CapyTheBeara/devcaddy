@@ -35,6 +35,14 @@ func TestPlugin(t *testing.T) {
 
 			So(res, ShouldBeNil)
 		})
+
+		Convey("If LogOnly is set, it will set the outpuf file mode to LOG", func() {
+			p := NewPlugin(&PluginConfig{LogOnly: true}, fn)
+			p.InC <- inputFile
+			res := <-p.OutC
+
+			So(res.Op, ShouldEqual, LOG)
+		})
 	})
 }
 
@@ -115,6 +123,63 @@ func TestCommandPlugin(t *testing.T) {
 				So(res.Name, ShouldEqual, "foo.js")
 				So(res.Content, ShouldEqual, "hello bar")
 			})
+		})
+
+		Convey("File shouldn't be processed if it was deleted", func() {
+			p := NewCommandPlugin(&PluginConfig{
+				Command: "echo",
+				Args:    "-n {{fileContent}} bar",
+			})
+			inputFile.Op = REMOVE
+			p.InC <- inputFile
+			res := <-p.OutC
+
+			So(res.Name, ShouldEqual, "foo.js")
+			So(res.Content, ShouldEqual, "")
+			So(res.Op, ShouldEqual, REMOVE)
+		})
+	})
+}
+
+func TestNewPlugins(t *testing.T) {
+	Convey("creatPlugins correcly creates the Plugins", t, func() {
+		pcs := []*PluginConfig{
+			&PluginConfig{
+				Name:    "transpile",
+				Command: "echo",
+				Args:    "-n {{fileContent}}1",
+			},
+			&PluginConfig{
+				Name:    "template",
+				Command: "echo",
+				Args:    "-n {{fileContent}}2",
+				PipeTo:  "transpile",
+			},
+		}
+
+		plugins := NewPlugins(pcs)
+
+		Convey("Names should be correct", func() {
+			p := plugins.Get("transpile")
+			So(p.Name, ShouldEqual, "transpile")
+		})
+
+		Convey("Tranformers should be correct", func() {
+			p := plugins.Get("transpile")
+			p.InC <- &File{Name: "foo.js", Content: "hello"}
+			res := <-p.OutC
+
+			So(res.Name, ShouldEqual, "foo.js")
+			So(res.Content, ShouldEqual, "hello1")
+		})
+
+		Convey("Plugins that pipe to another plugin have their OutC set", func() {
+			p := plugins.Get("template")
+			p.InC <- &File{Name: "foo.js", Content: "hello"}
+			res := <-plugins.Get("transpile").OutC
+
+			So(res.Name, ShouldEqual, "foo.js")
+			So(res.Content, ShouldEqual, "hello21")
 		})
 	})
 }

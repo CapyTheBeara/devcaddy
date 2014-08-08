@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"log"
 	"os/exec"
 	"strings"
 )
@@ -19,6 +20,12 @@ type Plugin struct {
 	OutC      chan *File
 }
 
+func (p *Plugin) SetOutC(c chan *File) {
+	if p.PipeTo == "" {
+		p.OutC = c
+	}
+}
+
 func (p *Plugin) listen() {
 	go func() {
 		for {
@@ -27,8 +34,11 @@ func (p *Plugin) listen() {
 
 			if !p.NoOutput {
 				go func() {
-					in.LogOnly = p.LogOnly
 					out = p.Transform(in)
+
+					if p.LogOnly {
+						out.Op = LOG
+					}
 					p.OutC <- out
 				}()
 			} else {
@@ -50,12 +60,21 @@ func NewPlugin(cfg *PluginConfig, fn func(*File) *File) *Plugin {
 	return p
 }
 
+func NewIdentityPlugin() *Plugin {
+	return NewPlugin(&PluginConfig{}, func(f *File) *File {
+		return f
+	})
+}
+
 func NewCommandPlugin(cfg *PluginConfig) *Plugin {
 	fn := func(f *File) *File {
 		res := &File{
-			Name:    f.Name,
-			LogOnly: f.LogOnly,
-			Op:      f.Op,
+			Name: f.Name,
+			Op:   f.Op,
+		}
+
+		if f.IsDeleted() {
+			return res
 		}
 
 		argStr := cfg.Args
@@ -78,6 +97,7 @@ func NewCommandPlugin(cfg *PluginConfig) *Plugin {
 		b, err := cmd.CombinedOutput()
 		if err != nil {
 			res.Error = err
+			res.Op = ERROR
 		}
 
 		split := strings.Split(string(b), FILE_PATH_SPLITTER)
@@ -91,4 +111,52 @@ func NewCommandPlugin(cfg *PluginConfig) *Plugin {
 	}
 
 	return NewPlugin(cfg, fn)
+}
+
+func NewPlugins(pcs []*PluginConfig) *Plugins {
+	ps := map[string]*Plugin{}
+
+	for _, conf := range pcs {
+		p := NewCommandPlugin(conf)
+		ps[p.Name] = p
+	}
+
+	plugins := Plugins{ps}
+
+	for _, p := range ps {
+		if p.PipeTo != "" {
+			p.OutC = plugins.Get(p.PipeTo).InC
+		}
+	}
+
+	return &plugins
+}
+
+type Plugins struct {
+	content map[string]*Plugin
+}
+
+func (ps *Plugins) Get(name string) *Plugin {
+	if name == "_identity_" {
+		return NewIdentityPlugin()
+	}
+
+	p := ps.content[name]
+	if p == nil {
+		log.Fatalln("[error] Plugin was not defined:", name)
+	}
+	return p
+}
+
+func (ps *Plugins) Add(p *Plugin) {
+	ps.content[p.Name] = p
+}
+
+func (ps *Plugins) Each(fn func(*Plugin)) int {
+	i := 0
+	for _, p := range ps.content {
+		i++
+		fn(p)
+	}
+	return i
 }
