@@ -127,10 +127,9 @@ func (s *Server) Websocket() http.Handler {
 
 func (s *Server) listenForStoreUpdates() {
 	for {
-		name := <-s.Store.DidUpdate
-		Plog.PrintC("server", "updated: "+name)
+		f := <-s.Store.DidUpdate
 		for ch, _ := range s.ReloadChans {
-			ch <- name
+			ch <- f.Name
 		}
 	}
 }

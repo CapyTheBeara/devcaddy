@@ -21,7 +21,7 @@ func newTestWR(t *testing.T, url string) (*httptest.ResponseRecorder, *http.Requ
 
 func TestHtmls(t *testing.T) {
 	Convey("Given a server with a store", t, func() {
-		store := NewStore("", &Config{})
+		store := NewStore(NewConfig([]byte{}))
 		store.Put("index.html", "index!")
 		store.Put("tests.html", "tests!")
 
@@ -82,7 +82,7 @@ func TestHtmls(t *testing.T) {
 
 func TestAssets(t *testing.T) {
 	Convey("Given a server with a store", t, func() {
-		store := NewStore("", &Config{})
+		store := NewStore(NewConfig([]byte{}))
 		store.Put("app.js", "app js")
 		store.Put("app.css", "app css")
 
@@ -113,7 +113,7 @@ func TestAssets(t *testing.T) {
 
 func TestWebsocket(t *testing.T) {
 	Convey("Given a test server", t, func() {
-		store := NewStore("", &Config{})
+		store := NewStore(NewConfig([]byte{}))
 		s := NewServer(store)
 		ts := httptest.NewServer(s.Websocket())
 		addr := ts.Listener.Addr().String()
