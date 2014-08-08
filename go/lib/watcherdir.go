@@ -9,7 +9,15 @@ import (
 
 type DirWatcher struct {
 	watcher
-	Ext string
+	name string
+	Ext  string
+}
+
+func (w *DirWatcher) Name() string {
+	if w.name != "" {
+		return w.name
+	}
+	return w.Dir + ":" + w.Ext
 }
 
 func (w *DirWatcher) GetAllFiles() int {
@@ -27,7 +35,7 @@ func (w *DirWatcher) GetAllFiles() int {
 		}
 
 		if !info.IsDir() && strings.HasSuffix(path, w.Ext) {
-			size += w.sendFileToPlugin(path, 0)
+			size += w.sendFileToPlugin(path, CREATE)
 
 			if w.Proxy != "" {
 				skip = true

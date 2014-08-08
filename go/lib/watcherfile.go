@@ -6,7 +6,12 @@ import (
 
 type FileWatcher struct {
 	watcher
+	name  string
 	Files []string
+}
+
+func (w *FileWatcher) Name() string {
+	return w.name
 }
 
 // TODO - check for proxy
@@ -15,7 +20,7 @@ func (w *FileWatcher) GetAllFiles() int {
 	for _, name := range w.Files {
 		size++
 		path := filepath.Join(w.Root, w.Dir, name)
-		w.sendFileToPlugin(path, 0)
+		w.sendFileToPlugin(path, CREATE)
 	}
 	return size
 }
