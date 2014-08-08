@@ -14,7 +14,6 @@ func TestPlugin(t *testing.T) {
 	inputFile := createFile()
 
 	Convey("Given a Plugin with a transformer function", t, func() {
-
 		fn := func(f *File) *File {
 			return &File{Name: f.Name + "1", Content: f.Content + "!"}
 		}
@@ -42,6 +41,16 @@ func TestPlugin(t *testing.T) {
 			res := <-p.OutC
 
 			So(res.Op, ShouldEqual, LOG)
+		})
+
+		Convey("If input file is an error, transformer is not called", func() {
+			p := NewPlugin(&PluginConfig{}, fn)
+			inputFile.Op = ERROR
+			p.InC <- inputFile
+			res := <-p.OutC
+
+			So(res.Name, ShouldEqual, "foo.js")
+			So(res.Content, ShouldEqual, "hello")
 		})
 	})
 }

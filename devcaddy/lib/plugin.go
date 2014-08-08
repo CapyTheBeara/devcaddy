@@ -46,6 +46,10 @@ func (p *Plugin) listen() {
 	go func() {
 		for {
 			in := <-p.InC
+			if in.Op == ERROR {
+				p.OutC <- in
+			}
+
 			var out *File
 
 			if !p.NoOutput {
