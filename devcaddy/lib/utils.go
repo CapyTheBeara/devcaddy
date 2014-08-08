@@ -47,8 +47,8 @@ func (l *logging) PrintC(kind, text string) {
 	}
 }
 
-func LogProcessedFiles(in chan *lib.File, done chan bool, size int) chan *lib.File {
-	out := make(chan *lib.File)
+func LogProcessedFiles(in chan *File, done chan bool, size int) chan *File {
+	out := make(chan *File)
 	go func() {
 		i := 0
 		init := true
@@ -56,25 +56,25 @@ func LogProcessedFiles(in chan *lib.File, done chan bool, size int) chan *lib.Fi
 			f := <-in
 
 			switch f.Op {
-			case lib.LOG:
+			case LOG:
 				if f.Content != "" {
-					lib.Plog.PrintC("info", f.Content)
+					Plog.PrintC("info", f.Content)
 				}
-			case lib.CREATE:
+			case CREATE:
 				if !init {
-					lib.Plog.PrintC("created", f.Name)
+					Plog.PrintC("created", f.Name)
 				}
-			case lib.WRITE:
+			case WRITE:
 				if !init {
-					lib.Plog.PrintC("modified", f.Name)
+					Plog.PrintC("modified", f.Name)
 				}
-			case lib.REMOVE:
-				lib.Plog.PrintC("removed", f.Name)
-			case lib.RENAME:
-				lib.Plog.PrintC("removed", f.Name)
-			case lib.ERROR:
-				lib.Plog.PrintC("error", f.Error.Error())
-				lib.Plog.PrintC("error", f.Content)
+			case REMOVE:
+				Plog.PrintC("removed", f.Name)
+			case RENAME:
+				Plog.PrintC("removed", f.Name)
+			case ERROR:
+				Plog.PrintC("error", f.Error.Error())
+				Plog.PrintC("error", f.Content)
 			}
 
 			if init {
