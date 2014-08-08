@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
+	// "strings"
 	"time"
 
 	"gopkg.in/fsnotify.v0"
@@ -19,12 +19,14 @@ func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) 
 	if len(c.Files) > 0 {
 		wa = &FileWatcher{
 			watcher: _watcher,
+			name:    c.Name,
 			Files:   c.Files,
 		}
 
 	} else {
 		wa = &DirWatcher{
 			watcher: _watcher,
+			name:    c.Name,
 			Ext:     c.Ext,
 		}
 	}
@@ -35,13 +37,15 @@ func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) 
 }
 
 type WatcherConfig struct {
-	Dir, Ext, Proxy string
-	GroupAll        bool
-	Files           []string
-	PluginNames     []string `json:"plugins"`
+	Dir, Ext    string
+	Name, Proxy string
+	GroupAll    bool
+	Files       []string
+	PluginNames []string `json:"plugins"`
 }
 
 type Watcher interface {
+	Name() string
 	GetAllFiles() int
 	OutChan() chan *File
 	Ready() chan bool
@@ -51,7 +55,7 @@ type Watcher interface {
 	fsWatcher() *fsnotify.Watcher
 	listen(Watcher)
 	handleNewDir(string)
-	sendFileToPlugin(string, fsnotify.Op) int
+	sendFileToPlugin(string, FileOp) int
 }
 
 func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Config) watcher {
@@ -69,41 +73,34 @@ func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Co
 		ready:   make(chan bool),
 		procRes: make(chan *File),
 		events:  make(map[string]time.Time),
-		Plugins: []*Plugin{},
+		Plugins: NewPlugins([]*PluginConfig{}),
 	}
 
 	if len(c.PluginNames) == 0 {
-		p := NewPlugin(&PluginConfig{}, func(f *File) *File {
-			return f
-		})
-		p.OutC = w.procRes
-		w.Plugins = append(w.Plugins, p)
+		c.PluginNames = append(c.PluginNames, "_identity_")
+	}
 
-	} else {
-		for _, name := range c.PluginNames {
-			p := config.GetPlugin(name)
-
-			if p.PipeTo == "" {
-				p.OutC = w.procRes
-			}
-			w.Plugins = append(w.Plugins, p)
-		}
+	for _, name := range c.PluginNames {
+		p := config.GetPlugin(name)
+		p.SetOutC(w.procRes)
+		w.Plugins.Add(p)
 	}
 
 	if c.GroupAll {
-		w.store = NewStore(config.Root, &Config{})
+		w.store = NewStore(&Config{Root: config.Root})
 	}
 	return w
 }
 
 type watcher struct {
-	Root, Dir, Proxy string
-	OutC, procRes    chan *File
-	ready            chan bool
-	fsw              *fsnotify.Watcher
-	events           map[string]time.Time
-	store            *Store
-	Plugins          []*Plugin
+	Root          string
+	Dir, Proxy    string
+	OutC, procRes chan *File
+	ready         chan bool
+	fsw           *fsnotify.Watcher
+	events        map[string]time.Time
+	store         *Store
+	Plugins       *Plugins
 }
 
 func (w *watcher) OutChan() chan *File {
@@ -170,7 +167,7 @@ func (w *watcher) listen(wa Watcher) {
 				continue
 			}
 
-			w.sendFileToPlugin(evt.Name, op)
+			w.sendFileToPlugin(evt.Name, FileOp(op))
 
 		case err := <-w.fsWatcher().Errors:
 			if err != nil && err.Error() != "" {
@@ -180,7 +177,7 @@ func (w *watcher) listen(wa Watcher) {
 	}
 }
 
-func (w *watcher) sendFileToPlugin(opath string, op fsnotify.Op) int {
+func (w *watcher) sendFileToPlugin(opath string, op FileOp) int {
 	path := opath
 
 	if w.Proxy != "" {
@@ -190,23 +187,19 @@ func (w *watcher) sendFileToPlugin(opath string, op fsnotify.Op) int {
 	f := NewFile(path, op)
 
 	if w.store != nil {
-		w.store.Put(f.Name, f.Content)
-		<-w.store.DidUpdate
+		// w.store.PutFile(f)
+		// <-w.store.DidUpdate
 
-		contents := []string{}
-		for _, f := range w.store.GetAll() {
-			contents = append(contents, f.Content)
-		}
-		f.Content = strings.Join(contents, "\n")
+		// contents := []string{}
+		// for _, f := range w.store.GetAll() {
+		// 	contents = append(contents, f.Content)
+		// }
+		// f.Content = strings.Join(contents, "\n")
 	}
 
-	i := 0
-	for _, p := range w.Plugins {
-		i++
+	return w.Plugins.Each(func(p *Plugin) {
 		p.InC <- f
-	}
-
-	return i
+	})
 }
 
 // TODO - don't need PluginRes anymore
@@ -215,4 +208,44 @@ func (w *watcher) handlePluginRes() {
 		f := <-w.PluginRes()
 		w.OutChan() <- f
 	}
+}
+
+func NewWatchers(c *Config, out chan *File) *Watchers {
+	content := map[string]Watcher{}
+
+	for _, f := range c.Files {
+		wc := &WatcherConfig{
+			Name:        f.Name,
+			Dir:         f.Dir,
+			Ext:         f.Ext,
+			Files:       f.Files,
+			PluginNames: f.PluginNames,
+		}
+		w := NewWatcher(c.Root, out, wc, c)
+		content[w.Name()] = w
+	}
+
+	for _, wc := range c.WatcherConfs {
+		w := NewWatcher(c.Root, out, wc, c)
+		content[w.Name()] = w
+	}
+
+	return &Watchers{content}
+}
+
+type Watchers struct {
+	content map[string]Watcher
+}
+
+func (ws *Watchers) Get(name string) Watcher {
+	w := ws.content[name]
+	return w
+}
+
+func (ws *Watchers) GetInitialFiles() int {
+	size := 0
+	for _, w := range ws.content {
+		size += w.GetAllFiles()
+	}
+	return size
 }
