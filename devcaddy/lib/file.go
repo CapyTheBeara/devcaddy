@@ -19,15 +19,15 @@ const (
 
 type FileOp uint32
 
-func NewFile(name string, op FileOp) *File {
-	f := File{Name: name, Op: op}
-	if f.IsDeleted() {
+func NewFile(e *Event) *File {
+	f := File{Name: e.Name(), Op: e.Op, Error: e.Error}
+	if f.IsDeleted() || f.IsError() {
 		return &f
 	}
 
 	b, err := ioutil.ReadFile(f.Name)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln(f.Name, err)
 	}
 
 	f.Content = string(b)
@@ -76,4 +76,8 @@ type File struct {
 
 func (f *File) IsDeleted() bool {
 	return f.Op == REMOVE || f.Op == RENAME
+}
+
+func (f *File) IsError() bool {
+	return f.Op == ERROR
 }
