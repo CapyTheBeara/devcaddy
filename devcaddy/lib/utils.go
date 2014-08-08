@@ -54,6 +54,9 @@ func LogProcessedFiles(in chan *File, done chan bool, size int) chan *File {
 		init := true
 		for {
 			f := <-in
+			if f == nil {
+				continue
+			}
 
 			switch f.Op {
 			case LOG:
