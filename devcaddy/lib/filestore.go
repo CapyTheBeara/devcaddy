@@ -140,6 +140,14 @@ func (s *Store) MergeStoreFiles(file *File) string {
 	return file.Content
 }
 
+func (s *Store) GetAllContents() string {
+	contents := []string{}
+	for _, f := range s.GetAll() {
+		contents = append(contents, f.Content)
+	}
+	return strings.Join(contents, "\n")
+}
+
 func (s *Store) doUpdate(f *File) {
 	go func() {
 		s.DidUpdate <- f
