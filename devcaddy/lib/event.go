@@ -3,6 +3,7 @@ package lib
 import (
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"gopkg.in/fsnotify.v0"
@@ -10,11 +11,27 @@ import (
 
 var (
 	zeroTime = time.Time{}
-	// events   = map[string]time.Time{}
+	_events  = Events{contents: make(map[string]time.Time)}
 )
 
-func init() {
-	// events = make(map[string]time.Time)
+type Events struct {
+	sync.Mutex
+	contents map[string]time.Time
+}
+
+func (es *Events) Set(e *Event) {
+	es.Lock()
+	es.contents[e.Id] = e.CreatedAt
+	es.Unlock()
+}
+
+func (es *Events) Get(evt *Event) time.Time {
+	return es.contents[evt.Id]
+}
+
+func (es *Events) ShouldIgnore(e *Event) bool {
+	prevTime := _events.Get(e)
+	return prevTime != zeroTime && e.CreatedAt.Sub(prevTime).Seconds() < 0.01
 }
 
 func NewEvent(e fsnotify.Event, w Watcher) *Event {
@@ -57,19 +74,13 @@ func (e *Event) Name() string {
 	return e.name
 }
 
-// TODO remove param
-func (e *Event) Ignore(events map[string]time.Time) bool {
+func (e *Event) Ignore() bool {
 	if e.Op == CHMOD {
 		return true
 	}
 
-	ignore := false
-
-	if events[e.Id] != zeroTime && e.CreatedAt.Sub(events[e.Id]).Seconds() < 0.01 {
-		ignore = true
-	}
-
-	events[e.Id] = e.CreatedAt
+	ignore := _events.ShouldIgnore(e)
+	_events.Set(e)
 	return ignore
 }
 

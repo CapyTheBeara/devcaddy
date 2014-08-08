@@ -3,7 +3,6 @@ package lib
 import (
 	"log"
 	"path/filepath"
-	"time"
 
 	"gopkg.in/fsnotify.v0"
 )
@@ -68,7 +67,6 @@ func new_watcher(root, dir string, out chan *File, c *WatcherConfig, config *Con
 		Proxy:   c.Proxy,
 		fsw:     fsw,
 		ready:   make(chan bool),
-		events:  make(map[string]time.Time),
 		Plugins: NewPlugins([]*PluginConfig{}),
 	}
 
@@ -93,7 +91,6 @@ type watcher struct {
 	Dir, Proxy string
 	ready      chan bool
 	fsw        *fsnotify.Watcher
-	events     map[string]time.Time
 	store      *Store
 	Plugins    *Plugins
 }
@@ -123,7 +120,7 @@ func (w *watcher) listen(wa Watcher) {
 		case evt := <-w.fsWatcher().Events:
 			e := NewEvent(evt, wa)
 
-			if e.Ignore(w.events) {
+			if e.Ignore() {
 				continue
 			}
 

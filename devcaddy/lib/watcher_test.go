@@ -19,7 +19,7 @@ func TestFileWatcher(t *testing.T) {
 		makeTestDir(t, dir+"/bar")
 		makeTestFile(t, dir, "foo/index.js", "var foo;\n", 0)
 		makeTestFile(t, dir, "bar/main.js", "1", 0)
-		makeTestFile(t, dir, "foo/nope.foo", "nope", 0)
+		makeTestFile(t, dir, "foo/nope.foo", "nope", 20)
 
 		Convey("If no plugins are given", func() {
 			c := WatcherConfig{
@@ -105,7 +105,7 @@ func TestDirWatcher(t *testing.T) {
 		makeTestDir(t, dir+"/bar")
 		makeTestFile(t, dir, "foo.js", "var foo;\n", 0)
 		makeTestFile(t, dir, "bar/main.js", "1", 0)
-		makeTestFile(t, dir, "nope.foo", "nope", 0)
+		makeTestFile(t, dir, "nope.foo", "nope", 20)
 
 		c := WatcherConfig{
 			Dir:         dir,
@@ -199,7 +199,6 @@ func TestDirWatcher(t *testing.T) {
 
 			evt := fsnotify.Event{Name: "../tmp2/foo.js", Op: fsnotify.Create}
 			w.fsWatcher().Events <- evt
-
 			time.Sleep(time.Millisecond * 100)
 
 			w.fsWatcher().Events <- evt
@@ -242,9 +241,10 @@ func TestGroupAllWatcher(t *testing.T) {
 		makeTestFile(t, dir, "styles/app.scss", "1", 0)
 		makeTestFile(t, dir, "styles/partials/_foo.scss", "2", 0)
 		makeTestFile(t, dir, "styles/vendor/bar.scss", "3", 0)
-		makeTestFile(t, dir, "nope.foo", "nope", 0)
+		makeTestFile(t, dir, "nope.foo", "nope", 20)
 
 		c := WatcherConfig{
+			Name:        "watcherz",
 			Dir:         dir,
 			Ext:         "scss",
 			GroupAll:    true,
@@ -305,9 +305,10 @@ func TestProxyWatcher(t *testing.T) {
 		makeTestDir(t, dir+"/styles/partials")
 		makeTestFile(t, dir, "styles/app.scss", "1", 0)
 		makeTestFile(t, dir, "styles/partials/_foo.scss", "2", 0)
-		makeTestFile(t, dir, "styles/nope.foo", "nope", 0)
+		makeTestFile(t, dir, "styles/nope.foo", "nope", 20)
 
 		c := WatcherConfig{
+			Name:        "proxy",
 			Dir:         "styles",
 			Ext:         "scss",
 			Proxy:       "styles/app.scss",
