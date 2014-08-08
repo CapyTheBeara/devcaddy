@@ -2,19 +2,15 @@ package lib
 
 import (
 	"log"
-	"os"
 	"path/filepath"
-	// "strings"
 	"time"
 
 	"gopkg.in/fsnotify.v0"
 )
 
-var zeroTime = time.Time{}
-
-func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) Watcher {
+func NewWatcher(root string, out chan *File, c *WatcherConfig, config *Config) Watcher {
 	var wa Watcher
-	_watcher := new_watcher(root, c.Dir, outC, c, config)
+	_watcher := new_watcher(root, c.Dir, out, c, config)
 
 	if len(c.Files) > 0 {
 		wa = &FileWatcher{
@@ -31,7 +27,8 @@ func NewWatcher(root string, outC chan *File, c *WatcherConfig, config *Config) 
 		}
 	}
 
-	go wa.listen(wa)
+	go _watcher.listen(wa)
+	go _watcher.sendReady()
 	wa.addWatchDirs()
 	return wa
 }
@@ -47,18 +44,19 @@ type WatcherConfig struct {
 type Watcher interface {
 	Name() string
 	GetAllFiles() int
-	OutChan() chan *File
 	Ready() chan bool
-	PluginRes() chan *File
+	IsWatchingEvent(*Event) bool
 	addWatchDirs()
-	matchesFile(string) bool
 	fsWatcher() *fsnotify.Watcher
-	listen(Watcher)
-	handleNewDir(string)
-	sendFileToPlugin(string, FileOp) int
+	handleNewDir(*Event)
+	sendFileToPlugin(*Event) int
 }
 
-func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Config) watcher {
+func (w *watcher) Store() *Store {
+	return w.store
+}
+
+func new_watcher(root, dir string, out chan *File, c *WatcherConfig, config *Config) watcher {
 	fsw, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -67,11 +65,9 @@ func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Co
 	w := watcher{
 		Root:    root,
 		Dir:     dir,
-		OutC:    outC,
 		Proxy:   c.Proxy,
 		fsw:     fsw,
 		ready:   make(chan bool),
-		procRes: make(chan *File),
 		events:  make(map[string]time.Time),
 		Plugins: NewPlugins([]*PluginConfig{}),
 	}
@@ -82,7 +78,7 @@ func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Co
 
 	for _, name := range c.PluginNames {
 		p := config.GetPlugin(name)
-		p.SetOutC(w.procRes)
+		p.SetOutC(out)
 		w.Plugins.Add(p)
 	}
 
@@ -93,26 +89,17 @@ func new_watcher(root, dir string, outC chan *File, c *WatcherConfig, config *Co
 }
 
 type watcher struct {
-	Root          string
-	Dir, Proxy    string
-	OutC, procRes chan *File
-	ready         chan bool
-	fsw           *fsnotify.Watcher
-	events        map[string]time.Time
-	store         *Store
-	Plugins       *Plugins
-}
-
-func (w *watcher) OutChan() chan *File {
-	return w.OutC
+	Root       string
+	Dir, Proxy string
+	ready      chan bool
+	fsw        *fsnotify.Watcher
+	events     map[string]time.Time
+	store      *Store
+	Plugins    *Plugins
 }
 
 func (w *watcher) Ready() chan bool {
 	return w.ready
-}
-
-func (w *watcher) PluginRes() chan *File {
-	return w.procRes
 }
 
 func (w *watcher) fsWatcher() *fsnotify.Watcher {
@@ -126,88 +113,53 @@ func (w *watcher) addWatchDir(path string) {
 	}
 }
 
+func (w *watcher) sendReady() {
+	w.ready <- true
+}
+
 func (w *watcher) listen(wa Watcher) {
-	// don't require reading from ready
-	go func() {
-		w.ready <- true
-	}()
-
-	go w.handlePluginRes()
-
 	for {
 		select {
 		case evt := <-w.fsWatcher().Events:
-			op := evt.Op
-			now := time.Now()
+			e := NewEvent(evt, wa)
 
-			if evt.Op == fsnotify.Chmod {
+			if e.Ignore(w.events) {
 				continue
 			}
 
-			if w.events[evt.Name] != zeroTime {
-				if now.Sub(w.events[evt.Name]).Seconds() < 0.01 {
-					continue
-				}
-			}
-
-			w.events[evt.Name] = now
-
-			if !wa.matchesFile(evt.Name) {
+			if !wa.IsWatchingEvent(e) {
 				// ?need to handle dir deletion?
-				if op == fsnotify.Create {
-					fi, err := os.Stat(evt.Name)
-					if err != nil {
-						log.Println("[error] Unable to get file info:", err)
-					}
-
-					if fi.IsDir() {
-						wa.handleNewDir(evt.Name)
-					}
+				if e.IsNewDir() {
+					wa.handleNewDir(e)
 				}
 				continue
 			}
 
-			w.sendFileToPlugin(evt.Name, FileOp(op))
+			w.sendFileToPlugin(e)
 
 		case err := <-w.fsWatcher().Errors:
-			if err != nil && err.Error() != "" {
-				log.Println("watch error", err)
-			}
+			w.sendFileToPlugin(NewPseudoEvent("watcher error", ERROR, err))
 		}
 	}
 }
 
-func (w *watcher) sendFileToPlugin(opath string, op FileOp) int {
-	path := opath
-
+func (w *watcher) sendFileToPlugin(e *Event) int {
 	if w.Proxy != "" {
-		path = filepath.Join(w.Root, w.Proxy)
+		e.Event.Name = filepath.Join(w.Root, w.Proxy)
 	}
-
-	f := NewFile(path, op)
+	f := NewFile(e)
 
 	if w.store != nil {
-		// w.store.PutFile(f)
-		// <-w.store.DidUpdate
+		w.store.PutFile(f)
+		<-w.store.DidUpdate
 
-		// contents := []string{}
-		// for _, f := range w.store.GetAll() {
-		// 	contents = append(contents, f.Content)
-		// }
-		// f.Content = strings.Join(contents, "\n")
+		f = NewFile(e)
+		f.Content = w.store.GetAllContents()
 	}
 
 	return w.Plugins.Each(func(p *Plugin) {
 		p.InC <- f
 	})
-}
-
-// TODO - don't need PluginRes anymore
-func (w *watcher) handlePluginRes() {
-	for {
-		f := <-w.PluginRes()
-		w.OutChan() <- f
-	}
 }
 
 func NewWatchers(c *Config, out chan *File) *Watchers {

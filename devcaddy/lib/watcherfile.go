@@ -20,14 +20,14 @@ func (w *FileWatcher) GetAllFiles() int {
 	for _, name := range w.Files {
 		size++
 		path := filepath.Join(w.Root, w.Dir, name)
-		w.sendFileToPlugin(path, CREATE)
+		w.sendFileToPlugin(NewPseudoEvent(path, CREATE))
 	}
 	return size
 }
 
-func (w *FileWatcher) matchesFile(name string) bool {
+func (w *FileWatcher) IsWatchingEvent(evt *Event) bool {
 	for _, f := range w.Files {
-		if name == filepath.Join(w.Root, w.Dir, f) {
+		if evt.Name() == filepath.Join(w.Root, w.Dir, f) {
 			return true
 		}
 	}
@@ -43,6 +43,6 @@ func (w *FileWatcher) addWatchDirs() {
 	}
 }
 
-func (w *FileWatcher) handleNewDir(name string) {
+func (w *FileWatcher) handleNewDir(e *Event) {
 	return
 }

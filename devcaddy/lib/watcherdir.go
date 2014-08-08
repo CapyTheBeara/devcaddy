@@ -35,7 +35,7 @@ func (w *DirWatcher) GetAllFiles() int {
 		}
 
 		if !info.IsDir() && strings.HasSuffix(path, w.Ext) {
-			size += w.sendFileToPlugin(path, CREATE)
+			size += w.sendFileToPlugin(NewPseudoEvent(path, CREATE))
 
 			if w.Proxy != "" {
 				skip = true
@@ -46,8 +46,8 @@ func (w *DirWatcher) GetAllFiles() int {
 	return size
 }
 
-func (w *DirWatcher) matchesFile(name string) bool {
-	return strings.HasPrefix(name, w.fullPath()) && strings.HasSuffix(name, w.Ext)
+func (w *DirWatcher) IsWatchingEvent(evt *Event) bool {
+	return strings.HasPrefix(evt.Name(), w.fullPath()) && strings.HasSuffix(evt.Name(), w.Ext)
 }
 
 func (w *DirWatcher) addWatchDirs() {
@@ -64,8 +64,8 @@ func (w *DirWatcher) addWatchDirs() {
 	})
 }
 
-func (w *DirWatcher) handleNewDir(name string) {
-	w.addWatchDir(name)
+func (w *DirWatcher) handleNewDir(e *Event) {
+	w.addWatchDir(e.Name())
 }
 
 func (w *DirWatcher) fullPath() string {
