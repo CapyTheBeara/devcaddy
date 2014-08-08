@@ -6,11 +6,27 @@ import (
 	"strings"
 )
 
-const FILE_PATH_SPLITTER = "__SERVER_FILE_PATH__="
-
 type PluginConfig struct {
 	Name, Command, Args, PipeTo string
 	LogOnly, NoOutput           bool
+}
+
+func (cfg *PluginConfig) ProcessCommandArgs(f *File) []string {
+	argStr := cfg.Args
+	if !strings.Contains(argStr, "{{fileName}}") && !strings.Contains(argStr, "{{fileContent}}") {
+		argStr += " {{fileName}} {{fileContent}}"
+	}
+
+	// TODO - clean then use regexp.Split
+	args := strings.Split(argStr, " ")
+	for i, arg := range args {
+		if strings.Contains(arg, "{{fileName}}") {
+			args[i] = strings.Replace(arg, "{{fileName}}", f.Name, 1)
+		} else {
+			args[i] = strings.Replace(arg, "{{fileContent}}", f.Content, 1)
+		}
+	}
+	return args
 }
 
 type Plugin struct {
@@ -68,46 +84,15 @@ func NewIdentityPlugin() *Plugin {
 
 func NewCommandPlugin(cfg *PluginConfig) *Plugin {
 	fn := func(f *File) *File {
-		res := &File{
-			Name: f.Name,
-			Op:   f.Op,
-		}
+		args := cfg.ProcessCommandArgs(f)
 
 		if f.IsDeleted() {
-			return res
-		}
-
-		argStr := cfg.Args
-		if !strings.Contains(argStr, "{{fileName}}") && !strings.Contains(argStr, "{{fileContent}}") {
-			argStr += " {{fileName}} {{fileContent}}"
-		}
-
-		// TODO - clean then use regexp.Split
-		args := strings.Split(argStr, " ")
-		for i, arg := range args {
-			if strings.Contains(arg, "{{fileName}}") {
-				args[i] = strings.Replace(arg, "{{fileName}}", f.Name, 1)
-			} else {
-				args[i] = strings.Replace(arg, "{{fileContent}}", f.Content, 1)
-			}
+			return NewFileWithContent(f.Name, "", f.Op)
 		}
 
 		cmd := exec.Command(cfg.Command, args...)
-
-		b, err := cmd.CombinedOutput()
-		if err != nil {
-			res.Error = err
-			res.Op = ERROR
-		}
-
-		split := strings.Split(string(b), FILE_PATH_SPLITTER)
-
-		if len(split) > 1 {
-			res.Name = strings.TrimSpace(split[1])
-		}
-
-		res.Content = split[0]
-		return res
+		output, err := cmd.CombinedOutput()
+		return NewFileFromCommand(f, output, err)
 	}
 
 	return NewPlugin(cfg, fn)

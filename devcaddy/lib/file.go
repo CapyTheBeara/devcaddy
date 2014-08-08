@@ -3,8 +3,10 @@ package lib
 import (
 	"io/ioutil"
 	"log"
+	"strings"
 )
 
+const FILE_PATH_SPLITTER = "__SERVER_FILE_PATH__="
 const (
 	CREATE FileOp = 1 << iota
 	WRITE
@@ -36,16 +38,40 @@ func NewFileWithContent(name, content string, op FileOp) *File {
 	return &File{Name: name, Content: content, Op: op}
 }
 
-type File struct {
-	Name        string
-	Content     string
-	Type        string
-	Dir         string
-	Ext         string
+func NewFileFromCommand(oFile *File, output []byte, err error) *File {
+	f := &File{
+		Name: oFile.Name,
+		Op:   oFile.Op,
+	}
+
+	if err != nil {
+		f.Error = err
+		f.Op = ERROR
+	}
+
+	split := strings.Split(string(output), FILE_PATH_SPLITTER)
+
+	if len(split) > 1 {
+		f.Name = strings.TrimSpace(split[1])
+	}
+
+	f.Content = split[0]
+	return f
+}
+
+type FileConfig struct {
+	Dir, Ext    string
 	Files       []string
-	Error       error
 	PluginNames []string `json:"plugins"`
-	Op          FileOp
+}
+
+type File struct {
+	FileConfig
+	Name    string
+	Content string
+	Type    string
+	Error   error
+	Op      FileOp
 }
 
 func (f *File) IsDeleted() bool {
