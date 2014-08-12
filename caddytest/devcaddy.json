@@ -1,30 +1,17 @@
 {
     "plugins": [
+        { "args": "plugins/es6-transpiler.js" },
+        { "args": "plugins/ember-index-injector.js" },
         {
-            "name": "es6-transpiler",
-            "command": "node",
-            "args": "plugins/es6-transpiler.js"
-        },
-        {
-            "name": "ember-index-injector",
-            "command": "node",
-            "args": "plugins/ember-index-injector.js"
-        },
-        {
-            "name": "ember-template-compiler",
-            "command": "node",
             "args": "plugins/ember-template-compiler.js",
             "pipeTo": "es6-transpiler"
         },
         {
-            "name": "jshint",
             "command": "jshint",
             "args": "{{fileName}}",
             "logOnly": true
         },
         {
-            "name": "sass",
-            "command": "node",
             "args": "plugins/sass.js app/styles/sass app/styles/app.css",
             "logOnly": true
         }
