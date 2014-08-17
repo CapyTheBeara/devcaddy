@@ -5,9 +5,9 @@ import (
 	"errors"
 	"io"
 	"log"
-	"os/exec"
 	"strings"
-	"text/template"
+
+	"github.com/monocle/devcaddy/devcaddy/process/adapters"
 )
 
 func logFatal(msg string, err error) {
@@ -16,60 +16,19 @@ func logFatal(msg string, err error) {
 	}
 }
 
-func init() {
-	log.SetFlags(log.Lshortfile)
+func Marshal(args ...string) string {
+	return strings.Join(args, adapters.DelimJoin)
 }
 
-// need to run process from same dir as node_packages/
-// err = os.Chdir("../../caddytest")
-// logFatal("chdir", err)
-func nodeScript(delim, modStr string) string {
-	return `
-process.stdin.setEncoding('utf8');
-
-var END = "` + delim + `";
-var buf = [];
-var modStr = "` + template.JSEscapeString(modStr) + `";
-var m;
-
-if (modStr !== "") {
-    m = new module.constructor();
-    m.paths = module.paths;
-    m._compile(modStr, '__devcaddy_node_plugin__.js');
-}
-
-process.stdin.on('data', function(chunk) {
-    chunk = chunk.trim();
-
-    if(chunk.indexOf(END) > 0) {
-        chunk = chunk.replace(END, '');
-        buf.push(chunk);
-        res = buf.join('\n');
-
-        try {
-            if(m) {
-                console.log(m.exports.plugin(res));
-            } else {
-                eval(res);
-            }
-        } catch (e) {
-            process.stderr.write(e.message+'\n');
-        }
-        buf = [];
-    } else {
-        buf.push(chunk);
-    }
-});`
-
-}
-
-type Result struct {
+type Output struct {
 	Content string
 	Error   error
 }
 
-func NewProcess(name, delim, module string) *Process {
-	cmd := exec.Command("node", "-e", nodeScript(delim, module))
+func NewProcess(name, arg1, arg2 string) *Process {
+	adapter := adapters.Map[name]
+	cmd := adapter.Cmd(arg1, arg2)
+	delim := adapters.DelimEnd
 
 	in, err := cmd.StdinPipe()
 	logFatal("stdin pipe", err)
@@ -86,13 +45,13 @@ func NewProcess(name, delim, module string) *Process {
 	logFatal("command start", err)
 
 	p := Process{
-		Name:   name,
-		Cmd:    cmd,
+		Delim:  delim,
 		In:     make(chan string),
-		Out:    make(chan *Result),
-		InPipe: in,
-		OutBuf: outBuf,
-		ErrBuf: errBuf,
+		Out:    make(chan *Output),
+		inPipe: in,
+		outBuf: outBuf,
+		errBuf: errBuf,
+		res:    make(chan *Output),
 	}
 
 	go p.listenIn()
@@ -100,43 +59,49 @@ func NewProcess(name, delim, module string) *Process {
 }
 
 type Process struct {
-	Name   string
-	Cmd    *exec.Cmd
+	Delim  string
 	In     chan string
-	Out    chan *Result
-	InPipe io.WriteCloser
-	OutBuf *bufio.Reader
-	ErrBuf *bufio.Reader
+	Out    chan *Output
+	inPipe io.WriteCloser
+	outBuf *bufio.Reader
+	errBuf *bufio.Reader
+	res    chan *Output
 }
 
 func (p *Process) listenIn() {
 	for {
-		input := <-p.In
-		_, err := p.InPipe.Write([]byte(input + "\n"))
-		logFatal("InPipe write", err)
+		in := <-p.In
+
+		_, err := p.inPipe.Write([]byte(in + p.Delim + "\n"))
+		logFatal("inPipe write", err)
 
 		go p.listenOutBuf()
 		go p.listenErrBuf()
+
+		// block to avoid weird node error if multiple inputs
+		// come in before first input is processed
+		out := <-p.res
+		p.Out <- out
 	}
 }
 
 func (p *Process) listenOutBuf() {
-	str := p.readyFromBuf(p.OutBuf)
+	str := p.readFromBuf(p.outBuf)
 	if str != "" {
-		res := &Result{Content: str}
-		p.Out <- res
+		res := &Output{Content: str}
+		p.res <- res
 	}
 }
 
 func (p *Process) listenErrBuf() {
-	str := p.readyFromBuf(p.ErrBuf)
+	str := p.readFromBuf(p.errBuf)
 	if str != "" {
-		res := &Result{Error: errors.New(str)}
-		p.Out <- res
+		res := &Output{Error: errors.New(str)}
+		p.res <- res
 	}
 }
 
-func (p *Process) readyFromBuf(buf *bufio.Reader) string {
+func (p *Process) readFromBuf(buf *bufio.Reader) string {
 	res := []string{}
 
 	for {
