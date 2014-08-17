@@ -59,6 +59,16 @@ func TestCommandPlugin(t *testing.T) {
 	inputFile := createFile()
 
 	Convey("Given a CommandPlugin", t, func() {
+		Convey("Name and Command are parsed from Args if not given", func() {
+			p := NewCommandPlugin(&PluginConfig{
+				Path: "path/to/echo.js",
+				Args: "-n",
+			})
+
+			So(p.Name, ShouldEqual, "echo")
+			So(p.Command, ShouldEqual, "node")
+		})
+
 		Convey("An input file's name and content is sent as params", func() {
 			p := NewCommandPlugin(&PluginConfig{
 				Command: "echo",
@@ -150,6 +160,51 @@ func TestCommandPlugin(t *testing.T) {
 	})
 }
 
+func TestNewProcessPlugin(t *testing.T) {
+	inputFile := createFile()
+	inputFile.Content = `hello
+world`
+	nodeModule := `var foo;
+	exports.plugin = function(file, settings) {
+        return {
+        	name: file.name + settings.connector,
+        	content: file.content + settings.connector
+        };
+    };`
+	opts := `{ "connector": "!" }`
+
+	makeTestDir(t, "tmp")
+	makeTestFile(t, "tmp", "plugin.js", nodeModule, 0)
+
+	Convey("Given a ProcessPlugin", t, func() {
+		p := NewProcessPlugin(&PluginConfig{
+			Path: "tmp/plugin.js",
+			Opts: opts,
+		})
+
+		Convey("It can process inputs", func() {
+			defer removeTestDir(t, "tmp")
+
+			So(p.Name, ShouldEqual, "plugin")
+
+			p.InC <- inputFile
+			res := <-p.OutC
+
+			So(res.Error, ShouldBeNil)
+			So(res.Name, ShouldEqual, "foo.js!")
+			So(res.Content, ShouldEqual, "hello\nworld!")
+
+			inputFile.Content = "bye"
+			p.InC <- inputFile
+			res = <-p.OutC
+
+			So(res.Error, ShouldBeNil)
+			So(res.Name, ShouldEqual, "foo.js!")
+			So(res.Content, ShouldEqual, "bye!")
+		})
+	})
+}
+
 func TestNewPlugins(t *testing.T) {
 	Convey("creatPlugins correcly creates the Plugins", t, func() {
 		pcs := []*PluginConfig{
@@ -189,6 +244,56 @@ func TestNewPlugins(t *testing.T) {
 
 			So(res.Name, ShouldEqual, "foo.js")
 			So(res.Content, ShouldEqual, "hello21")
+		})
+	})
+}
+
+func TestPluginConf(t *testing.T) {
+	f := createFile()
+
+	Convey("ProcessCommandPlugin argument parsing", t, func() {
+		Convey("Given a Command, Name and Args, nothing is chanaged", func() {
+			pc := PluginConfig{Command: "wha?", Name: "zoo", Path: "plugins/es6-transpiler.js"}
+			pc.Parse()
+			pc.InjectedArgs(f)
+			So(pc.Name, ShouldEqual, "zoo")
+			So(pc.Command, ShouldEqual, "wha?")
+			So(pc.Path, ShouldEqual, "plugins/es6-transpiler.js")
+		})
+
+		Convey("Parse will determine JavaScript Command and Name if not given", func() {
+			pc := PluginConfig{Path: "plugins/es6-transpiler.js"}
+			pc.Parse()
+			So(pc.Name, ShouldEqual, "es6-transpiler")
+			So(pc.Command, ShouldEqual, "node")
+		})
+
+		Convey("Parse will determine Go Command and Name if not given", func() {
+			pc := PluginConfig{Path: "plugins/es6-transpiler.go"}
+			pc.Parse()
+			So(pc.Name, ShouldEqual, "es6-transpiler")
+			So(pc.Command, ShouldEqual, "go run")
+		})
+
+		Convey("Parse will determine Ruby Command and Name if not given", func() {
+			pc := PluginConfig{Path: "plugins/es6-transpiler.rb"}
+			pc.Parse()
+			So(pc.Name, ShouldEqual, "es6-transpiler")
+			So(pc.Command, ShouldEqual, "ruby")
+		})
+
+		Convey("Parse will determine Name from Command if given args is not a file path", func() {
+			pc := PluginConfig{Command: "wha?", Args: "echo"}
+			pc.Parse()
+			So(pc.Name, ShouldEqual, "wha?")
+			So(pc.Command, ShouldEqual, "wha?")
+		})
+
+		Convey("Parse will determine Name from Path", func() {
+			pc := PluginConfig{Command: "wha?", Path: "foo.js"}
+			pc.Parse()
+			So(pc.Name, ShouldEqual, "foo")
+			So(pc.Command, ShouldEqual, "wha?")
 		})
 	})
 }
