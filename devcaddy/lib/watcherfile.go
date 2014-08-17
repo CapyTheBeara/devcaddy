@@ -36,10 +36,11 @@ func (w *FileWatcher) IsWatchingEvent(evt *Event) bool {
 
 func (w *FileWatcher) addWatchDirs() {
 	for _, f := range w.Files {
-		name := filepath.Join(w.Root, w.Dir, f)
+		name := filepath.Join(w.Dir, f)
+		fullName := filepath.Join(w.Root, name)
 
 		Plog.PrintC("watching", name)
-		w.addWatchDir(filepath.Dir(name))
+		w.addWatchDir(filepath.Dir(fullName))
 	}
 }
 

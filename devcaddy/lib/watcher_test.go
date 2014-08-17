@@ -241,7 +241,7 @@ func TestGroupAllWatcher(t *testing.T) {
 		makeTestFile(t, dir, "styles/app.scss", "1", 0)
 		makeTestFile(t, dir, "styles/partials/_foo.scss", "2", 0)
 		makeTestFile(t, dir, "styles/vendor/bar.scss", "3", 0)
-		makeTestFile(t, dir, "nope.foo", "nope", 20)
+		makeTestFile(t, dir, "nope.foo", "nope", 0)
 
 		c := WatcherConfig{
 			Name:        "watcherz",
@@ -265,22 +265,40 @@ func TestGroupAllWatcher(t *testing.T) {
 			defer removeTestDir(t, dir)
 
 			doneC := make(chan bool)
+			files := []*File{}
+
 			go func() {
 				f := <-out
-				So(f.Name, ShouldEqual, "../tmp3/styles/app.scss")
+				files = append(files, f)
+				f = <-out
+				files = append(files, f)
+				f = <-out
+				files = append(files, f)
+
+				f = &File{}
+
+				for _, ff := range files {
+					if ff.Name == "../tmp3/styles/app.scss" {
+						f = ff
+					}
+				}
 				So(f.Content, ShouldEqual, "1")
 
-				f = <-out
-				So(f.Name, ShouldEqual, "../tmp3/styles/partials/_foo.scss")
+				for _, ff := range files {
+					if ff.Name == "../tmp3/styles/partials/_foo.scss" {
+						f = ff
+					}
+				}
 				So(f.Content, ShouldEqual, "1\n2")
 
-				f = <-out
-
-				So(f.Name, ShouldEqual, "../tmp3/styles/vendor/bar.scss")
+				for _, ff := range files {
+					if ff.Name == "../tmp3/styles/vendor/bar.scss" {
+						f = ff
+					}
+				}
 				So(f.Content, ShouldEqual, "1\n2\n3")
 
 				time.Sleep(time.Millisecond * 20)
-
 				select {
 				case <-out:
 					So("Fail - Shouldn't get here", ShouldBeNil)

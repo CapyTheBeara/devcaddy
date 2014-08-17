@@ -51,10 +51,6 @@ type Watcher interface {
 	sendFileToPlugin(*Event) int
 }
 
-func (w *watcher) Store() *Store {
-	return w.store
-}
-
 func new_watcher(root, dir string, out chan *File, c *WatcherConfig, config *Config) watcher {
 	fsw, err := fsnotify.NewWatcher()
 	if err != nil {

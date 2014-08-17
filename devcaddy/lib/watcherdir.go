@@ -51,13 +51,14 @@ func (w *DirWatcher) IsWatchingEvent(evt *Event) bool {
 }
 
 func (w *DirWatcher) addWatchDirs() {
+	Plog.PrintC("watching", "*."+w.Ext+": "+w.Dir)
+
 	filepath.Walk(w.fullPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatalln("[error] Couldn't watch folder:", err)
 		}
 
 		if info.IsDir() {
-			Plog.PrintC("watching", "*."+w.Ext+": "+path)
 			w.addWatchDir(path)
 		}
 		return nil
