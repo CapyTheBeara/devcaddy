@@ -76,8 +76,12 @@ func LogProcessedFiles(in chan *File, done chan bool, size int) chan *File {
 			case RENAME:
 				Plog.PrintC("removed", f.Name)
 			case ERROR:
-				Plog.PrintC("error", f.Error.Error())
-				Plog.PrintC("error", f.Content)
+				if f.Error != nil {
+					Plog.PrintC("error", f.PluginName+"\n"+f.Error.Error())
+				}
+				if f.Content != "" {
+					Plog.PrintC("error", f.PluginName+"\n"+f.Content)
+				}
 			}
 
 			if init {
