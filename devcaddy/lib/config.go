@@ -24,13 +24,13 @@ func NewConfig(cfg []byte) *Config {
 
 	err := json.Unmarshal(cfg, &config)
 	if err != nil {
-		log.Fatalln("[error] Problem parsing JSON config:", err)
+		log.Fatalln(err, ERROR_CONFIG_PARSE)
 	}
 
 	if config.Root == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Fatalln("[error] Unable to determine your project folder name. Please try again or specify it in your .json config file.")
+			log.Fatalln(ERROR_CONFIG_ROOT)
 		}
 
 		config.Root = "../" + filepath.Base(cwd)
