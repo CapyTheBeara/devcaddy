@@ -38,10 +38,11 @@ func NewFileWithContent(name, content string, op FileOp) *File {
 	return &File{Name: name, Content: content, Op: op}
 }
 
-func NewFileFromCommand(oFile *File, output []byte, err error) *File {
+func NewFileFromCommand(oFile *File, output []byte, err error, pluginName string) *File {
 	f := &File{
-		Name: oFile.Name,
-		Op:   oFile.Op,
+		Name:       oFile.Name,
+		Op:         oFile.Op,
+		PluginName: pluginName,
 	}
 
 	if err != nil {
@@ -67,11 +68,12 @@ type FileConfig struct {
 
 type File struct {
 	FileConfig
-	Name    string
-	Content string
-	Type    string
-	Error   error
-	Op      FileOp
+	Name       string
+	Content    string
+	Type       string
+	Error      error
+	Op         FileOp
+	PluginName string
 }
 
 func (f *File) IsDeleted() bool {
